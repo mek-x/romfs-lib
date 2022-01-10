@@ -33,6 +33,8 @@
 #define ROMFS_ALIGNUP(addr)   ((((uint32_t)(addr))+ROMFS_MAXPADDING)&ROMFS_ALIGNMASK)
 #define ROMFS_ALIGNDOWN(addr) (((uint32_t)(addr))&ROMFS_ALIGNMASK)
 
+#define ROMF_MAX_LINKS        16
+
 typedef struct {
     size_t size;
     const char *name;

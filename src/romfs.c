@@ -61,6 +61,8 @@ int RomfsFdStat(int fd)
     return fildes[file].node.mode;
 }
 
-int RomfsOpenAt(int fd, const char *path, int flags, int mode) {
+int RomfsOpenAt(int fd, const char *path, int flags, int mode)
+{
+
     return -EACCES;
 }
