@@ -3,7 +3,6 @@ project(romfs-tool)
 
 set(TARGET ${CMAKE_PROJECT_NAME})
 set(VERSION "0.0.1")
-option(TRACES "Enable debug traces" OFF)
 
 message("Building ${TARGET} v${VERSION}")
 
