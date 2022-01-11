@@ -21,11 +21,6 @@
 #include <setjmp.h>
 #include <stdio.h>
 
-/*=======External Functions This Runner Calls=====*/
-extern void setUp(void);
-extern void tearDown(void);
-extern void test_Hello(void);
-
 /*=======Test Reset Option=====*/
 void resetTest(void)
 {
@@ -33,11 +28,14 @@ void resetTest(void)
   setUp();
 }
 
+/*=======External Functions This Runner Calls=====*/
+extern void setUp(void);
+extern void tearDown(void);
+extern void test_BasicRomfsLoad(void);
 
 int main(void)
 {
   UnityBegin("test/tests.c");
-  RUN_TEST(test_Hello, 14);
-
+  RUN_TEST(test_BasicRomfsLoad, 14);
   return (UnityEnd());
 }
