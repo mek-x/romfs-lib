@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stddef.h>
 #include <stdint.h>
 
 #define ROMFS_TYPE_HARDLINK    0    ///> FILEHDR_INFO: Link destination file header

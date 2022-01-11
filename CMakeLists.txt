@@ -9,7 +9,10 @@ message("Building ${TARGET} v${VERSION}")
 add_executable(${TARGET} cmd/main.c)
 
 add_subdirectory(${CMAKE_SOURCE_DIR}/src romfs)
+add_subdirectory(${CMAKE_SOURCE_DIR}/test test)
 
 target_include_directories(${TARGET} PUBLIC include)
 
 target_link_libraries(${TARGET} PUBLIC romfs)
+
+enable_testing()
