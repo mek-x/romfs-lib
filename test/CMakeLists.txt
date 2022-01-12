@@ -1,10 +1,10 @@
 enable_testing()
 
-set(unity_root unity)
+add_subdirectory(unity)
+
 set(test_src
     tests.c
     test_runners/runner.c
-    ${unity_root}/src/unity.c
     )
 
 set(src
@@ -13,6 +13,8 @@ set(src
     )
 
 add_executable(tests ${test_src} ${src})
+target_link_libraries(tests unity)
+
 add_test(all_tests tests)
 
 target_include_directories(tests PUBLIC ${unity_root}/src)

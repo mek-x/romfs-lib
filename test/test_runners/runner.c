@@ -1,41 +1,17 @@
-/*=======Test Runner Used To Run Each Test Below=====*/
-#define RUN_TEST(TestFunc, TestLineNum) \
-{ \
-  Unity.CurrentTestName = #TestFunc; \
-  Unity.CurrentTestLineNumber = TestLineNum; \
-  Unity.NumberOfTests++; \
-  if (TEST_PROTECT()) \
-  { \
-      setUp(); \
-      TestFunc(); \
-  } \
-  if (TEST_PROTECT()) \
-  { \
-    tearDown(); \
-  } \
-  UnityConcludeTest(); \
-}
+#include "unity_fixture.h"
 
-/*=======Automagically Detected Files To Include=====*/
-#include "unity.h"
-#include <setjmp.h>
-#include <stdio.h>
-
-/*=======Test Reset Option=====*/
-void resetTest(void)
+TEST_GROUP_RUNNER(load)
 {
-  tearDown();
-  setUp();
+    RUN_TEST_CASE(load, basicRomfsLoad);
 }
 
-/*=======External Functions This Runner Calls=====*/
-extern void setUp(void);
-extern void tearDown(void);
-extern void test_BasicRomfsLoad(void);
-
-int main(void)
+static void runAllTests(void)
 {
-  UnityBegin("test/tests.c");
-  RUN_TEST(test_BasicRomfsLoad, 14);
-  return (UnityEnd());
+    RUN_TEST_GROUP(load);
 }
+
+int main(int argc, const char* argv[])
+{
+    return UnityMain(argc, argv, runAllTests);
+}
+

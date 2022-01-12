@@ -1,22 +1,23 @@
+#include "unity_fixture.h"
 
 #include "romfs.h"
 #include "romfs-internal.h"
-#include "unity.h"
 
 #include "empty_romfs.h"
 #include "basic_romfs.h"
 
-void setUp(void)
+TEST_GROUP(load);
+
+TEST_SETUP(load)
 {
 }
 
-void tearDown(void)
+TEST_TEAR_DOWN(load)
 {
 }
 
-void test_BasicRomfsLoad(void)
+TEST(load, basicRomfsLoad)
 {
-  int ret = RomfsLoad(empty_romfs, empty_romfs_len);
-  /* All of these should pass */
-  TEST_ASSERT_EQUAL(0, ret);
+    int ret = RomfsLoad(empty_romfs, empty_romfs_len);
+    TEST_ASSERT_EQUAL_INT(0, ret);
 }
