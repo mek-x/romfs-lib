@@ -7,13 +7,8 @@ set(test_src
     test_runners/runner.c
     )
 
-set(src
-    ${CMAKE_SOURCE_DIR}/src/romfs.c
-    ${CMAKE_SOURCE_DIR}/src/romfs-internal.c
-    )
-
 add_executable(tests ${test_src} ${src})
-target_link_libraries(tests unity)
+target_link_libraries(tests unity romfs)
 
 add_test(all_tests tests)
 

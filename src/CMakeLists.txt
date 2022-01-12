@@ -1,6 +1,5 @@
-set(sources
-    "romfs.c"
-    "romfs-internal.c"
+file(GLOB sources
+    "./*.c"
 )
 
 add_library(romfs STATIC ${sources})
@@ -12,5 +11,5 @@ target_include_directories(romfs PUBLIC ${CMAKE_SOURCE_DIR}/include)
 
 if (TRACES)
     message("-- Debug traces enabled")
-    target_compile_definitions(romfs PUBLIC DEBUG)
+    target_compile_definitions(romfs PUBLIC DEBUG=1)
 endif()
