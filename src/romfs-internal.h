@@ -1,6 +1,7 @@
 #pragma once
 
 #if DEBUG
+#   include <stdio.h>
 #   define ROMFS_TRACE(fmt, ...) fprintf(stderr, "[%s]: " fmt "\n", __FUNCTION__ , ##__VA_ARGS__)
 #else
 #   define ROMFS_TRACE(fmt, ...)
@@ -60,4 +61,5 @@ typedef struct {
 
 int RomfsVolumeConfigure(const uint8_t *buf, volume_t *vol);
 int RomfsGetNodeHdr(const romfs_t *rm, uint32_t offset, nodehdr_t *nd);
+int RomfsSearchDir(const romfs_t *rm, const char *name, uint32_t *offset);
 int RomfsFindEntry(const romfs_t *rm, uint32_t startOffset, const char* path, nodehdr_t *nd);

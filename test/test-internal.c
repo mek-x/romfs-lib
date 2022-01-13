@@ -142,7 +142,7 @@ TEST_SETUP(path)
 {
     rm_basic.img = basic_romfs;
     rm_basic.size = basic_romfs_len;
-    rm_basic.vol.size = 96;
+    rm_basic.vol.size = 288;
 }
 
 TEST_TEAR_DOWN(path)
@@ -159,7 +159,29 @@ TEST(path, FindEntryFileNotFound)
     TEST_ASSERT_EQUAL_INT(-ENOENT, ret);
 }
 
+TEST(path, SearchDirNotFound)
+{
+    int ret;
+    uint32_t offset = ROMFS_ROOT_OFFSET;
+
+    ret = RomfsSearchDir(&rm_basic, "not_a_file", &offset);
+    TEST_ASSERT_EQUAL_INT(-ENOENT, ret);
+}
+
+TEST(path, SearchDirFoundFile)
+{
+    int ret;
+    uint32_t offset = ROMFS_ROOT_OFFSET;
+
+    ret = RomfsSearchDir(&rm_basic, "a", &offset);
+    TEST_ASSERT_EQUAL_INT(0, ret);
+
+    TEST_ASSERT_EQUAL_HEX(0xf0, offset);
+}
+
 TEST_GROUP_RUNNER(path)
 {
     RUN_TEST_CASE(path, FindEntryFileNotFound);
+    RUN_TEST_CASE(path, SearchDirNotFound);
+    RUN_TEST_CASE(path, SearchDirFoundFile);
 }

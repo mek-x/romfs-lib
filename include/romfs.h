@@ -15,6 +15,9 @@
 #define ROMFS_MODE_EXEC        8    ///> Modifier for TYPE_DIRECTORY and TYPE_FILE
 
 #define IS_TYPE(type,mode)     (((mode)&ROMFS_TYPE_MASK) == (type))
+#define IS_HARDLINK(mode)      IS_TYPE(ROMFS_TYPE_HARDLINK, (mode))
+#define IS_DIRECTORY(mode)     IS_TYPE(ROMFS_TYPE_DIRECTORY, (mode))
+#define IS_FILE(mode)          IS_TYPE(ROMFS_TYPE_FILE, (mode))
 
 int RomfsLoad(uint8_t * img, size_t imgSize);
 int RomfsFdStat(int fd);

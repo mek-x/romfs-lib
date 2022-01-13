@@ -79,6 +79,27 @@ int RomfsGetNodeHdr(const romfs_t *rm, uint32_t offset, nodehdr_t *nd)
     return 0;
 }
 
+int RomfsSearchDir(const romfs_t *rm, const char *name, uint32_t *offset)
+{
+    int ret;
+    nodehdr_t node;
+    uint32_t off = *offset;
+
+    while (off != 0) {
+        ret = RomfsGetNodeHdr(rm, off, &node);
+        if (ret) return -EINVAL;
+
+        if (strcmp(node.name, name) == 0) {
+            *offset = off;
+            return 0;
+	}
+
+        off = node.next;
+    }
+
+    return -ENOENT;
+}
+
 int RomfsFindEntry(const romfs_t *rm, uint32_t startOffset, const char* path, nodehdr_t *nd)
 {
     int ret;
