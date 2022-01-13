@@ -33,6 +33,7 @@ int RomfsLoad(uint8_t * img, size_t imgSize) {
     romfs.size = imgSize;
 
     ret = RomfsVolumeConfigure(romfs.img, &romfs.vol);
+    if (ret != 0) return ret;
 
     ROMFS_TRACE("Loaded volume \"%s\". Size is %ld bytes. First entry offset = 0x%x",
         romfs.vol.name,
@@ -40,8 +41,8 @@ int RomfsLoad(uint8_t * img, size_t imgSize) {
         romfs.vol.rootOff);
 
     // preopen root dir as first file descriptor
+    ret = RomfsGetNodeHdr(&romfs, romfs.vol.rootOff, &fildes[0].node);
     fildes[0].opened = YES;
-    RomfsGetNodeHdr(&romfs, romfs.vol.rootOff, &fildes[0].node);
 
     return ret;
 }
