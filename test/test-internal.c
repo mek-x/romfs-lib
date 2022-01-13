@@ -179,9 +179,90 @@ TEST(path, SearchDirFoundFile)
     TEST_ASSERT_EQUAL_HEX(0xf0, offset);
 }
 
+TEST(path, ParsePathEmpty)
+{
+    char *path = "";
+    filename_t parsed[1];
+    int ret;
+    
+    ret = RomfsParsePath(path, parsed, 1);
+    TEST_ASSERT_EQUAL_INT(0, ret);
+
+    TEST_ASSERT_EQUAL_STRING("", parsed[0]);
+}
+
+TEST(path, ParsePathRoot)
+{
+    char *path = "/";
+    filename_t parsed[1];
+    int ret;
+    
+    ret = RomfsParsePath(path, parsed, 1);
+    TEST_ASSERT_EQUAL_INT(1, ret);
+
+    TEST_ASSERT_EQUAL_STRING("/", parsed[0]);
+}
+
+TEST(path, ParsePathTooLong)
+{
+    char path[300];
+    filename_t parsed[1];
+    int ret;
+
+    memset(path, '/', 299);
+    path[299] = '\0';
+
+    ret = RomfsParsePath(path, parsed, 1);
+    TEST_ASSERT_EQUAL_INT(-ENAMETOOLONG, ret);
+}
+
+TEST(path, ParsePathArrayLenHasToBeBiggerThan0)
+{
+    int ret;
+    char *path = "";
+    filename_t parsed[1];
+
+    ret = RomfsParsePath(path, parsed, 0);
+    TEST_ASSERT_EQUAL_INT(-EINVAL, ret);
+}
+
+TEST(path, ParsePathFileInRootDir)
+{
+    char *path = "////file";
+    filename_t parsed[2];
+    int ret;
+
+    ret = RomfsParsePath(path, parsed, 2);
+    TEST_ASSERT_EQUAL_INT(2, ret);
+
+    TEST_ASSERT_EQUAL_STRING("/", parsed[0]);
+    TEST_ASSERT_EQUAL_STRING("file", parsed[1]);
+}
+
+TEST(path, ParsePathFileInDirRelative)
+{
+    char *path = "a/////b//c";
+    filename_t parsed[3];
+    int ret;
+
+    ret = RomfsParsePath(path, parsed, 3);
+    TEST_ASSERT_EQUAL_INT(3, ret);
+
+    TEST_ASSERT_EQUAL_STRING("a", parsed[0]);
+    TEST_ASSERT_EQUAL_STRING("b", parsed[1]);
+    TEST_ASSERT_EQUAL_STRING("c", parsed[2]);
+}
+
+    
 TEST_GROUP_RUNNER(path)
 {
     RUN_TEST_CASE(path, FindEntryFileNotFound);
     RUN_TEST_CASE(path, SearchDirNotFound);
     RUN_TEST_CASE(path, SearchDirFoundFile);
+    RUN_TEST_CASE(path, ParsePathEmpty);
+    RUN_TEST_CASE(path, ParsePathRoot);
+    RUN_TEST_CASE(path, ParsePathTooLong);
+    RUN_TEST_CASE(path, ParsePathArrayLenHasToBeBiggerThan0);
+    RUN_TEST_CASE(path, ParsePathFileInRootDir);
+    RUN_TEST_CASE(path, ParsePathFileInDirRelative);
 }

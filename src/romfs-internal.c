@@ -100,6 +100,41 @@ int RomfsSearchDir(const romfs_t *rm, const char *name, uint32_t *offset)
     return -ENOENT;
 }
 
+int RomfsParsePath(const char *path, filename_t entryList[], size_t entryListLen)
+{
+    int ret = 0;
+    path_t pathCopy;
+    char *p;
+
+    if (entryListLen == 0)
+    return -EINVAL;
+
+    if (strlen(path) > ROMFS_MAX_PATH_LEN) 
+    return -ENAMETOOLONG;
+
+    strcpy(pathCopy, path);
+    p = pathCopy;
+    entryList[0][0] = '\0';
+
+    // remove initial / and set first element to indicate absolute path
+    if (*p == '/') {
+    	strcpy(entryList[0], "/");
+	ret = 1;
+	while (*p == '/') {p++;}
+    }
+
+    p = strtok(p, "/");
+    while (ret < entryListLen) {
+    	if (p != NULL) {
+        	strcpy(entryList[ret], p);
+		ret++;
+    	} else break;
+	p = strtok(NULL, "/");
+    }
+
+    return ret;
+}
+
 int RomfsFindEntry(const romfs_t *rm, uint32_t startOffset, const char* path, nodehdr_t *nd)
 {
     int ret;
