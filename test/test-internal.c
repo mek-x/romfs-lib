@@ -10,18 +10,18 @@ extern unsigned int empty_romfs_len;
 #define EMPTY_ROMFS_ROOT_OFFSET 0x20
 
 /***************************************/
-TEST_GROUP(internal);
+TEST_GROUP(volume);
 /***************************************/
 
-TEST_SETUP(internal)
+TEST_SETUP(volume)
 {
 }
 
-TEST_TEAR_DOWN(internal)
+TEST_TEAR_DOWN(volume)
 {
 }
 
-TEST(internal, VolumeConfigureBadImg)
+TEST(volume, VolumeConfigureBadImg)
 {
     uint8_t buf[10] = { 0 };
     volume_t vol;
@@ -30,7 +30,7 @@ TEST(internal, VolumeConfigureBadImg)
     TEST_ASSERT_EQUAL_INT(-EINVAL, ret);
 }
 
-TEST(internal, VolumeConfigureGoodImg)
+TEST(volume, VolumeConfigureGoodImg)
 {
     volume_t vol;
 
@@ -42,12 +42,35 @@ TEST(internal, VolumeConfigureGoodImg)
     TEST_ASSERT_EQUAL_HEX(0xC7B9AC8D, vol.chksum);
 }
 
-TEST(internal, GetNodeHdrBadSize)
+TEST_GROUP_RUNNER(volume)
 {
-    romfs_t rm = { .img = empty_romfs, .size = 0, .vol.size = 96 };
+    RUN_TEST_CASE(volume, VolumeConfigureBadImg);
+    RUN_TEST_CASE(volume, VolumeConfigureGoodImg);
+}
+
+/***************************************/
+TEST_GROUP(nodes);
+/***************************************/
+
+romfs_t rm;
+
+TEST_SETUP(nodes)
+{
+    rm.img = empty_romfs;
+    rm.size = empty_romfs_len;
+    rm.vol.size = 96;
+}
+
+TEST_TEAR_DOWN(nodes)
+{
+}
+
+TEST(nodes, GetNodeHdrBadSize)
+{
     nodehdr_t node;
     int ret;
 
+    rm.size = 0;
     ret = RomfsGetNodeHdr(&rm, EMPTY_ROMFS_ROOT_OFFSET, &node);
     TEST_ASSERT_EQUAL_INT(-EINVAL, ret);
 
@@ -57,9 +80,8 @@ TEST(internal, GetNodeHdrBadSize)
     TEST_ASSERT_EQUAL_INT(-EINVAL, ret);
 }
 
-TEST(internal, GetNodeHdrCheckData)
+TEST(nodes, GetNodeHdrCheckData)
 {
-    romfs_t rm = { .img = empty_romfs, .size = empty_romfs_len, .vol.size = 96 };
     nodehdr_t node;
 
     int ret = RomfsGetNodeHdr(&rm, EMPTY_ROMFS_ROOT_OFFSET, &node);
@@ -74,9 +96,8 @@ TEST(internal, GetNodeHdrCheckData)
     TEST_ASSERT_EQUAL_HEX(0x40, node.dataOff);
 }
 
-TEST(internal, FindEntryRoot)
+TEST(nodes, FindEntryRoot)
 {
-    romfs_t rm = { .img = empty_romfs, .size = empty_romfs_len, .vol.size = 96 };
     nodehdr_t node;
     int ret;
 
@@ -86,13 +107,11 @@ TEST(internal, FindEntryRoot)
     TEST_ASSERT_MESSAGE(IS_TYPE(ROMFS_TYPE_DIRECTORY, node.mode), "Root should be a directory");
 }
 
-TEST_GROUP_RUNNER(internal)
+TEST_GROUP_RUNNER(nodes)
 {
-    RUN_TEST_CASE(internal, VolumeConfigureBadImg);
-    RUN_TEST_CASE(internal, VolumeConfigureGoodImg);
 
-    RUN_TEST_CASE(internal, GetNodeHdrBadSize);
-    RUN_TEST_CASE(internal, GetNodeHdrCheckData);
+    RUN_TEST_CASE(nodes, GetNodeHdrBadSize);
+    RUN_TEST_CASE(nodes, GetNodeHdrCheckData);
 
-    RUN_TEST_CASE(internal, FindEntryRoot);
+    RUN_TEST_CASE(nodes, FindEntryRoot);
 }
