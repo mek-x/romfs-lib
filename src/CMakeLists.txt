@@ -7,7 +7,7 @@ target_compile_features(romfs PRIVATE c_std_99)
 
 option(TRACES "Enable debug traces" OFF)
 
-target_include_directories(romfs PUBLIC ${CMAKE_SOURCE_DIR}/include)
+target_include_directories(romfs PUBLIC ../include)
 
 if (TRACES)
     message("-- Debug traces enabled")
