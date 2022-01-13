@@ -1,5 +1,6 @@
 enable_testing()
 
+option(UNITY_EXTENSION_FIXTURE "Compiles Unity with the \"fixture\" extension." ON)
 add_subdirectory(unity)
 
 file(GLOB test_src "./test-*.c")
