@@ -10,6 +10,7 @@ static void runAllTests(void)
 
     RUN_TEST_GROUP(volume);
     RUN_TEST_GROUP(nodes);
+    RUN_TEST_GROUP(path);
 }
 
 int main(int argc, const char* argv[])

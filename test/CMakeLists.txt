@@ -19,7 +19,7 @@ string (REPLACE " " ";" TEST_LIST "${TEST_LIST}")
 string (REPLACE "\n" "" TEST_LIST "${TEST_LIST}")
 
 foreach(TEST_NAME ${TEST_LIST})
-    message("-- Adding test group \"${TEST_NAME}\"")
+    message("-- Testing: adding test group \"${TEST_NAME}\"")
     add_test(${TEST_NAME} tests -g ${TEST_NAME})
 endforeach()
 

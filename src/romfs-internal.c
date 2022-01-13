@@ -81,5 +81,18 @@ int RomfsGetNodeHdr(const romfs_t *rm, uint32_t offset, nodehdr_t *nd)
 
 int RomfsFindEntry(const romfs_t *rm, uint32_t startOffset, const char* path, nodehdr_t *nd)
 {
-    return RomfsGetNodeHdr(rm, startOffset, nd);
+    int ret;
+    uint32_t offset;
+
+    ret = FollowHardlinks(rm, startOffset, &offset);
+    if (ret < 0) return ret;
+    else if (ret == LINK_FOLLOWED) ROMFS_TRACE("followed hardlink");
+
+    ret = RomfsGetNodeHdr(rm, offset, nd);
+    if (ret < 0) return ret;
+
+    if (strcmp(path, nd->name) == 0) ret = 0;
+    else ret = -ENOENT;
+
+    return ret;
 }
