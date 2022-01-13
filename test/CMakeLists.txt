@@ -2,12 +2,9 @@ enable_testing()
 
 add_subdirectory(unity)
 
-set(test_src
-    tests.c
-    test_runners/runner.c
-    )
+file(GLOB test_src "./test-*.c")
 
-add_executable(tests ${test_src} ${src})
+add_executable(tests ${test_src} test_runners/runner.c)
 target_link_libraries(tests unity romfs)
 
 EXECUTE_PROCESS(

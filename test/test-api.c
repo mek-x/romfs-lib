@@ -5,8 +5,8 @@
 #include "romfs.h"
 #include "romfs-internal.h"
 
-#include "empty_romfs.h"
-#include "basic_romfs.h"
+extern unsigned char empty_romfs[];
+extern unsigned int empty_romfs_len;
 
 
 /***************************************/
