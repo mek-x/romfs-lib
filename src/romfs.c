@@ -4,14 +4,6 @@
 
 #include "romfs-internal.h"
 
-/* TODO
-1. get file mode - m3_wasi_generic_fd_fdstat_get
-2. open - m3_wasi_generic_path_open
-3. read dir - m3_wasi_generic_fd_readdir
-4. read file - m3_wasi_generic_fd_read
-...
-*/
-
 static romfs_t romfs;
 
 #define MAX_OPEN 10
