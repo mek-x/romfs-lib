@@ -60,3 +60,4 @@ typedef struct {
 
 int RomfsVolumeConfigure(const uint8_t *buf, volume_t *vol);
 int RomfsGetNodeHdr(const romfs_t *rm, uint32_t offset, nodehdr_t *nd);
+int RomfsFindEntry(const romfs_t *rm, uint32_t startOffset, const char* path, nodehdr_t *nd);

@@ -74,6 +74,18 @@ TEST(internal, GetNodeHdrCheckData)
     TEST_ASSERT_EQUAL_HEX(0x40, node.dataOff);
 }
 
+TEST(internal, FindEntryRoot)
+{
+    romfs_t rm = { .img = empty_romfs, .size = empty_romfs_len, .vol.size = 96 };
+    nodehdr_t node;
+    int ret;
+
+    ret = RomfsFindEntry(&rm, EMPTY_ROMFS_ROOT_OFFSET, ".", &node);
+    TEST_ASSERT_EQUAL_INT(0, ret);
+
+    TEST_ASSERT_MESSAGE(IS_TYPE(ROMFS_TYPE_DIRECTORY, node.mode), "Root should be a directory");
+}
+
 TEST_GROUP_RUNNER(internal)
 {
     RUN_TEST_CASE(internal, VolumeConfigureBadImg);
@@ -81,4 +93,6 @@ TEST_GROUP_RUNNER(internal)
 
     RUN_TEST_CASE(internal, GetNodeHdrBadSize);
     RUN_TEST_CASE(internal, GetNodeHdrCheckData);
+
+    RUN_TEST_CASE(internal, FindEntryRoot);
 }

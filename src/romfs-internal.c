@@ -79,17 +79,7 @@ int RomfsGetNodeHdr(const romfs_t *rm, uint32_t offset, nodehdr_t *nd)
     return 0;
 }
 
-int RomfsFindEntry(const romfs_t *rm, uint32_t startOffset, const char* path)
+int RomfsFindEntry(const romfs_t *rm, uint32_t startOffset, const char* path, nodehdr_t *nd)
 {
-    uint32_t offset = startOffset;
-
-    // absolute path
-    if (path[0] == '/') {
-        offset = rm->vol.rootOff;
-    // relative path
-    } else {
-
-    }
-
-    return 0;
+    return RomfsGetNodeHdr(rm, startOffset, nd);
 }
