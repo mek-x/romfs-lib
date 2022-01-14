@@ -184,7 +184,7 @@ TEST(path, ParsePathEmpty)
     char *path = "";
     filename_t parsed[1];
     int ret;
-    
+
     ret = RomfsParsePath(path, parsed, 1);
     TEST_ASSERT_EQUAL_INT(0, ret);
 
@@ -196,7 +196,7 @@ TEST(path, ParsePathRoot)
     char *path = "/";
     filename_t parsed[1];
     int ret;
-    
+
     ret = RomfsParsePath(path, parsed, 1);
     TEST_ASSERT_EQUAL_INT(1, ret);
 
@@ -205,12 +205,12 @@ TEST(path, ParsePathRoot)
 
 TEST(path, ParsePathTooLong)
 {
-    char path[300];
+    char path[400];
     filename_t parsed[1];
     int ret;
 
-    memset(path, '/', 299);
-    path[299] = '\0';
+    memset(path, '/', 399);
+    path[399] = '\0';
 
     ret = RomfsParsePath(path, parsed, 1);
     TEST_ASSERT_EQUAL_INT(-ENAMETOOLONG, ret);
@@ -253,7 +253,7 @@ TEST(path, ParsePathFileInDirRelative)
     TEST_ASSERT_EQUAL_STRING("c", parsed[2]);
 }
 
-    
+
 TEST_GROUP_RUNNER(path)
 {
     RUN_TEST_CASE(path, FindEntryFileNotFound);

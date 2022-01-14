@@ -109,7 +109,7 @@ int RomfsParsePath(const char *path, filename_t entryList[], size_t entryListLen
     if (entryListLen == 0)
     return -EINVAL;
 
-    if (strlen(path) > ROMFS_MAX_PATH_LEN) 
+    if (strnlen(path, ROMFS_MAX_PATH_LEN) >= ROMFS_MAX_PATH_LEN)
     return -ENAMETOOLONG;
 
     strcpy(pathCopy, path);
