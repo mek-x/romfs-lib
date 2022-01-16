@@ -63,6 +63,7 @@ TEST_SETUP(nodes)
     rm.img = empty_romfs;
     rm.size = empty_romfs_len;
     rm.vol.size = 96;
+    rm.vol.rootOff = ROMFS_ROOT_OFFSET;
 }
 
 TEST_TEAR_DOWN(nodes)
@@ -106,7 +107,7 @@ TEST(nodes, FindEntryRoot)
     nodehdr_t node;
     int ret;
 
-    ret = RomfsFindEntry(&rm, ROMFS_ROOT_OFFSET, ".", &node);
+    ret = RomfsFindEntry(&rm, ROMFS_ROOT_OFFSET, "/", &node);
     TEST_ASSERT_EQUAL_INT(0, ret);
 
     TEST_ASSERT_MESSAGE(IS_TYPE(ROMFS_TYPE_DIRECTORY, node.mode), "Root should be a directory");
@@ -117,7 +118,7 @@ TEST(nodes, FindEntryFollowHardlink)
     nodehdr_t node;
     int ret;
 
-    ret = RomfsFindEntry(&rm, 0x40, ".", &node);
+    ret = RomfsFindEntry(&rm, ROMFS_ROOT_OFFSET, ".", &node);
     TEST_ASSERT_EQUAL_INT(0, ret);
 
     TEST_ASSERT_MESSAGE(IS_TYPE(ROMFS_TYPE_DIRECTORY, node.mode), "Root should be a directory");
@@ -143,20 +144,12 @@ TEST_SETUP(path)
     rm_basic.img = basic_romfs;
     rm_basic.size = basic_romfs_len;
     rm_basic.vol.size = 288;
+    rm_basic.vol.rootOff = ROMFS_ROOT_OFFSET;
 }
 
 TEST_TEAR_DOWN(path)
 {
     memset(&rm_basic, 0, sizeof(rm));
-}
-
-TEST(path, FindEntryFileNotFound)
-{
-     nodehdr_t node;
-    int ret;
-
-    ret = RomfsFindEntry(&rm_basic, ROMFS_ROOT_OFFSET, "not_a_file", &node);
-    TEST_ASSERT_EQUAL_INT(-ENOENT, ret);
 }
 
 TEST(path, SearchDirNotFound)
@@ -272,9 +265,50 @@ TEST(path, ParsePathCountTheElementsInPath)
     TEST_ASSERT_EQUAL_INT(4, ret);
 }
 
+TEST(path, FindEntryFileNotFound)
+{
+    nodehdr_t node;
+    int ret;
+
+    ret = RomfsFindEntry(&rm_basic, ROMFS_ROOT_OFFSET, "not_a_file", &node);
+    TEST_ASSERT_EQUAL_INT(-ENOENT, ret);
+}
+
+TEST(path, FindEntryFileFound)
+{
+    nodehdr_t node;
+    int ret;
+
+    ret = RomfsFindEntry(&rm_basic, ROMFS_ROOT_OFFSET, "a", &node);
+    TEST_ASSERT_EQUAL_INT(0, ret);
+
+    TEST_ASSERT_EQUAL_HEX(0x110, node.dataOff);
+}
+
+TEST(path, FindEntryFileInDirFound)
+{
+    nodehdr_t node;
+    int ret;
+
+    ret = RomfsFindEntry(&rm_basic, ROMFS_ROOT_OFFSET, "dir/b", &node);
+    TEST_ASSERT_EQUAL_INT(0, ret);
+
+    TEST_ASSERT_EQUAL_HEX(0xc0, node.dataOff);
+}
+
+TEST(path, FindEntryDirAbsolutePath)
+{
+    nodehdr_t node;
+    int ret;
+
+    ret = RomfsFindEntry(&rm_basic, ROMFS_ROOT_OFFSET, "/dir", &node);
+    TEST_ASSERT_EQUAL_INT(0, ret);
+
+    TEST_ASSERT_EQUAL_HEX(0x60, node.off);
+}
+
 TEST_GROUP_RUNNER(path)
 {
-    RUN_TEST_CASE(path, FindEntryFileNotFound);
     RUN_TEST_CASE(path, SearchDirNotFound);
     RUN_TEST_CASE(path, SearchDirFoundFile);
     RUN_TEST_CASE(path, ParsePathEmpty);
@@ -285,4 +319,8 @@ TEST_GROUP_RUNNER(path)
     RUN_TEST_CASE(path, ParsePathFileInRootDir);
     RUN_TEST_CASE(path, ParsePathFileInDirRelative);
     RUN_TEST_CASE(path, ParsePathCountTheElementsInPath);
+    RUN_TEST_CASE(path, FindEntryFileNotFound);
+    RUN_TEST_CASE(path, FindEntryFileFound);
+    RUN_TEST_CASE(path, FindEntryFileInDirFound);
+    RUN_TEST_CASE(path, FindEntryDirAbsolutePath);
 }

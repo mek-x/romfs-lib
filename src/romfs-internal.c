@@ -68,6 +68,7 @@ int RomfsGetNodeHdr(const romfs_t *rm, uint32_t offset, nodehdr_t *nd)
 
     buf = buf + offset;
 
+    nd->off = offset;
     nd->next = ReadBE32(buf, FILEHDR_NEXT_OFF) & ~(FILEHDR_NEXT_MODE_MASK);
     nd->mode = buf[FILEHDR_NEXT_OFF + 3] & 0xF;
     nd->info = ReadBE32(buf, FILEHDR_INFO_OFF);
@@ -152,20 +153,41 @@ int RomfsParsePath(const char *path, filename_t entryList[], size_t entryListLen
     return ret;
 }
 
-int RomfsFindEntry(const romfs_t *rm, uint32_t startOffset, const char* path, nodehdr_t *nd)
+int RomfsFindEntry(const romfs_t *rm, uint32_t offset, const char* path, nodehdr_t *nd)
 {
-    int ret;
-    uint32_t offset;
+    int d, ret;
+    filename_t pathList[10]; // what should be max depth? Maybe need to reengineer this...
 
-    ret = FollowHardlinks(rm, startOffset, &offset);
-    if (ret < 0) return ret;
-    else if (ret == LINK_FOLLOWED) ROMFS_TRACE("followed hardlink");
+    d = RomfsParsePath(path, pathList, 10);
+    if (d < 0) return d;
 
-    ret = RomfsGetNodeHdr(rm, offset, nd);
-    if (ret < 0) return ret;
+    for (int i = 0; i < d; i++) {
+        if (pathList[i][0] == '/') { //special case for root dir
+            offset = rm->vol.rootOff;
+        } else {
+            ret = RomfsSearchDir(rm, pathList[i], &offset);
+            ROMFS_TRACE("%s -> %d (%x)", pathList[i], ret, offset);
+            if (ret < 0) {
+                return ret;
+            }
+        }
+        ret = RomfsGetNodeHdr(rm, offset, nd);
+        if (ret < 0) {
+            return ret;
+        }
 
-    if (strcmp(path, nd->name) == 0) ret = 0;
-    else ret = -ENOENT;
+        ROMFS_TRACE("[%d] \"%s\" 0x%x ->0x%x", i, pathList[i], nd->mode, offset);
+
+        if (IS_DIRECTORY(nd->mode)) {
+            offset = nd->info;
+        } else if (IS_HARDLINK(nd->mode)) {
+            ret = FollowHardlinks(rm, offset, &offset);
+            if (ret < 0) return ret;
+            else if (ret == LINK_FOLLOWED) ROMFS_TRACE("followed hardlink");
+        }
+    }
+
+   // ret = RomfsGetNodeHdr(rm, offset, nd);
 
     return ret;
 }

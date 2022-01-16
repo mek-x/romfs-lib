@@ -52,6 +52,7 @@ typedef struct {
 } romfs_t;
 
 typedef struct {
+    uint32_t off;
     uint32_t next;
     uint32_t info;
     uint32_t size;
