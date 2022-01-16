@@ -106,11 +106,13 @@ int RomfsParsePath(const char *path, filename_t entryList[], size_t entryListLen
     path_t pathCopy;
     char *p;
 
-    if (entryListLen == 0)
-    return -EINVAL;
+    if (entryListLen == 0) {
+        return -EINVAL;
+    }
 
-    if (strnlen(path, ROMFS_MAX_PATH_LEN) >= ROMFS_MAX_PATH_LEN)
-    return -ENAMETOOLONG;
+    if (strnlen(path, ROMFS_MAX_PATH_LEN) == ROMFS_MAX_PATH_LEN) {
+        return -ENAMETOOLONG;
+    }
 
     strcpy(pathCopy, path);
     p = pathCopy;
@@ -118,18 +120,22 @@ int RomfsParsePath(const char *path, filename_t entryList[], size_t entryListLen
 
     // remove initial / and set first element to indicate absolute path
     if (*p == '/') {
-    	strcpy(entryList[0], "/");
-	ret = 1;
-	while (*p == '/') {p++;}
+        strcpy(entryList[0], "/");
+    ret = 1;
+    while (*p == '/') {p++;}
     }
 
     p = strtok(p, "/");
     while (ret < entryListLen) {
-    	if (p != NULL) {
-        	strcpy(entryList[ret], p);
-		ret++;
-    	} else break;
-	p = strtok(NULL, "/");
+        if (p != NULL) {
+            if (strnlen(p, ROMFS_MAX_NAME_LEN) == ROMFS_MAX_NAME_LEN) {
+                ret = -ENAMETOOLONG;
+                break;
+            }
+            strcpy(entryList[ret], p);
+            ret++;
+        } else break;
+        p = strtok(NULL, "/");
     }
 
     return ret;

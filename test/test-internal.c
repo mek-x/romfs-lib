@@ -203,7 +203,7 @@ TEST(path, ParsePathRoot)
     TEST_ASSERT_EQUAL_STRING("/", parsed[0]);
 }
 
-TEST(path, ParsePathTooLong)
+TEST(path, ParsePathPathTooLong)
 {
     char path[400];
     filename_t parsed[1];
@@ -211,6 +211,16 @@ TEST(path, ParsePathTooLong)
 
     memset(path, '/', 399);
     path[399] = '\0';
+
+    ret = RomfsParsePath(path, parsed, 1);
+    TEST_ASSERT_EQUAL_INT(-ENAMETOOLONG, ret);
+}
+
+TEST(path, ParsePathNameTooLong)
+{
+    char path[] = "0123456789012345678901234567890";
+    filename_t parsed[1];
+    int ret;
 
     ret = RomfsParsePath(path, parsed, 1);
     TEST_ASSERT_EQUAL_INT(-ENAMETOOLONG, ret);
@@ -261,7 +271,8 @@ TEST_GROUP_RUNNER(path)
     RUN_TEST_CASE(path, SearchDirFoundFile);
     RUN_TEST_CASE(path, ParsePathEmpty);
     RUN_TEST_CASE(path, ParsePathRoot);
-    RUN_TEST_CASE(path, ParsePathTooLong);
+    RUN_TEST_CASE(path, ParsePathPathTooLong);
+    RUN_TEST_CASE(path, ParsePathNameTooLong);
     RUN_TEST_CASE(path, ParsePathArrayLenHasToBeBiggerThan0);
     RUN_TEST_CASE(path, ParsePathFileInRootDir);
     RUN_TEST_CASE(path, ParsePathFileInDirRelative);
