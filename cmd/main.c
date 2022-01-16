@@ -32,7 +32,7 @@ int OpenRomfs(const char * filename) {
 int main(int argc, char *argv[])
 {
     if (argc < 2) {
-	    FATAL("Need argument with filename");
+        FATAL("Need argument with filename");
     }
 
     if (OpenRomfs(argv[1]) != 0) FATAL("Can't open file");

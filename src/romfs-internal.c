@@ -92,7 +92,7 @@ int RomfsSearchDir(const romfs_t *rm, const char *name, uint32_t *offset)
         if (strcmp(node.name, name) == 0) {
             *offset = off;
             return 0;
-	}
+    }
 
         off = node.next;
     }
@@ -106,7 +106,12 @@ int RomfsParsePath(const char *path, filename_t entryList[], size_t entryListLen
     path_t pathCopy;
     char *p;
 
-    if (entryListLen == 0) {
+    if (entryList == NULL) {
+        // we're just counting depth, use some arbitraty big number
+        entryListLen = 999;
+    }
+
+    if (entryListLen == 0 && entryList != NULL) {
         return -EINVAL;
     }
 
@@ -116,13 +121,17 @@ int RomfsParsePath(const char *path, filename_t entryList[], size_t entryListLen
 
     strcpy(pathCopy, path);
     p = pathCopy;
-    entryList[0][0] = '\0';
+    if (entryList != NULL) {
+        entryList[0][0] = '\0';
+    }
 
     // remove initial / and set first element to indicate absolute path
     if (*p == '/') {
-        strcpy(entryList[0], "/");
-    ret = 1;
-    while (*p == '/') {p++;}
+        if (entryList != NULL) {
+            strcpy(entryList[0], "/");
+        }
+        ret = 1;
+        while (*p == '/') {p++;}
     }
 
     p = strtok(p, "/");
@@ -132,7 +141,9 @@ int RomfsParsePath(const char *path, filename_t entryList[], size_t entryListLen
                 ret = -ENAMETOOLONG;
                 break;
             }
-            strcpy(entryList[ret], p);
+            if (entryList != NULL) {
+                strcpy(entryList[ret], p);
+            }
             ret++;
         } else break;
         p = strtok(NULL, "/");

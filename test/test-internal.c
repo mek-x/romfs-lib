@@ -263,6 +263,14 @@ TEST(path, ParsePathFileInDirRelative)
     TEST_ASSERT_EQUAL_STRING("c", parsed[2]);
 }
 
+TEST(path, ParsePathCountTheElementsInPath)
+{
+    char *path = "1/////22//333/4444";
+    int ret;
+
+    ret = RomfsParsePath(path, NULL, 0);
+    TEST_ASSERT_EQUAL_INT(4, ret);
+}
 
 TEST_GROUP_RUNNER(path)
 {
@@ -276,4 +284,5 @@ TEST_GROUP_RUNNER(path)
     RUN_TEST_CASE(path, ParsePathArrayLenHasToBeBiggerThan0);
     RUN_TEST_CASE(path, ParsePathFileInRootDir);
     RUN_TEST_CASE(path, ParsePathFileInDirRelative);
+    RUN_TEST_CASE(path, ParsePathCountTheElementsInPath);
 }
