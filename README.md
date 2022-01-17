@@ -9,7 +9,9 @@ For use in embedded environments.
 ## ToDo
 
 - [x] get file mode
+- [ ] fstatat
 - [x] open
 - [x] close
 - [x] read
-- [ ] read dir
+- [ ] seek (lseek)
+- [x] read dir

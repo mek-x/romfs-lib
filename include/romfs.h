@@ -24,8 +24,17 @@
 
 #define ROMFS_O_FLAGS_NONBLOCK  (1 << 0)
 
+typedef struct {
+    uint32_t    next;
+    uint32_t    inode;
+    size_t      nameLen;
+    uint8_t     type;
+    const char  *name;
+} romfs_dirent_t;
+
 int RomfsLoad(uint8_t * img, size_t imgSize);
 int RomfsFdStat(int fd);
 int RomfsOpenAt(int fd, const char *path, int flags);
 int RomfsClose(int fd);
 int RomfsRead(int fd, void *buf, size_t nbyte);
+int RomfsReadDir(int fd, romfs_dirent_t *buf, size_t bufLen, uint32_t cookie, size_t *bufUsed);

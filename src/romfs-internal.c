@@ -62,7 +62,7 @@ int RomfsGetNodeHdr(const romfs_t *rm, uint32_t offset, nodehdr_t *nd)
 {
     uint8_t *buf = rm->img;
 
-    if (offset > rm->vol.size || offset > rm->size) {
+    if (offset > rm->vol.size || offset > rm->size || offset == 0) {
         return -EINVAL;
     }
 

@@ -1,5 +1,6 @@
 #include "unity_fixture.h"
 
+#include <string.h>
 #include <errno.h>
 
 #include "romfs.h"
@@ -10,6 +11,13 @@ extern unsigned char basic_romfs[];
 extern unsigned int empty_romfs_len;
 extern unsigned int basic_romfs_len;
 
+#define ROOT_OFFSET           0x20
+#define SECOND_ENTRY_ROOT_OFF 0x40
+#define DIR_OFFSET            0x60
+#define FIRST_ENTRY_IN_DIR    0x80
+#define A_FILE_OFFSET         0xF0
+#define B_FILE_OFFSET         0xA0
+#define DIR_IN_DIR_OFFSET     0xD0
 
 /***************************************/
 TEST_GROUP(load);
@@ -253,21 +261,21 @@ TEST_GROUP_RUNNER(close)
 }
 
 /***************************************/
-TEST_GROUP(read);
+TEST_GROUP(readFile);
 /***************************************/
 
-TEST_SETUP(read)
+TEST_SETUP(readFile)
 {
     RomfsLoad(basic_romfs, basic_romfs_len);
     openedFd = RomfsOpenAt(ROOT_FD, "a", 0);
 }
 
-TEST_TEAR_DOWN(read)
+TEST_TEAR_DOWN(readFile)
 {
     RomfsClose(openedFd);
 }
 
-TEST(read, ReadBadFile)
+TEST(readFile, ReadBadFile)
 {
     int r;
     char buf[10];
@@ -279,7 +287,7 @@ TEST(read, ReadBadFile)
     TEST_ASSERT_EQUAL_INT(-EBADF, r);
 }
 
-TEST(read, ReadBadParams)
+TEST(readFile, ReadBadParams)
 {
     int r;
 
@@ -287,7 +295,7 @@ TEST(read, ReadBadParams)
     TEST_ASSERT_EQUAL_INT(-EINVAL, r);
 }
 
-TEST(read, ReadFile)
+TEST(readFile, ReadFile)
 {
     char buf[10];
 
@@ -303,7 +311,7 @@ TEST(read, ReadFile)
     TEST_ASSERT_EQUAL_STRING_LEN("a\n", buf, 2);
 }
 
-TEST(read, ReadFileBiggerThanFileSize)
+TEST(readFile, ReadFileBiggerThanFileSize)
 {
     char buf[10] = { 0 };
 
@@ -314,7 +322,7 @@ TEST(read, ReadFileBiggerThanFileSize)
     TEST_ASSERT_EQUAL_MEMORY("aaa\n\0\0\0\0\0\0", buf, 10);
 }
 
-TEST(read, ReadFileOnceThenTryToOverflow)
+TEST(readFile, ReadFileOnceThenTryToOverflow)
 {
     char buf[10] = { 0 };
 
@@ -328,7 +336,7 @@ TEST(read, ReadFileOnceThenTryToOverflow)
     TEST_ASSERT_EQUAL_MEMORY("a\n\0", buf, 3);
 }
 
-TEST(read, TryToReadFromDir)
+TEST(readFile, TryToReadFromDir)
 {
     char buf[10] = { 0 };
     int fd;
@@ -341,12 +349,164 @@ TEST(read, TryToReadFromDir)
     TEST_ASSERT_EQUAL_MEMORY("\0\0", buf, 2);
 }
 
-TEST_GROUP_RUNNER(read)
+TEST_GROUP_RUNNER(readFile)
 {
-    RUN_TEST_CASE(read, ReadBadFile);
-    RUN_TEST_CASE(read, ReadBadParams);
-    RUN_TEST_CASE(read, ReadFile);
-    RUN_TEST_CASE(read, ReadFileBiggerThanFileSize);
-    RUN_TEST_CASE(read, ReadFileOnceThenTryToOverflow);
-    RUN_TEST_CASE(read, TryToReadFromDir);
+    RUN_TEST_CASE(readFile, ReadBadFile);
+    RUN_TEST_CASE(readFile, ReadBadParams);
+    RUN_TEST_CASE(readFile, ReadFile);
+    RUN_TEST_CASE(readFile, ReadFileBiggerThanFileSize);
+    RUN_TEST_CASE(readFile, ReadFileOnceThenTryToOverflow);
+    RUN_TEST_CASE(readFile, TryToReadFromDir);
+}
+
+
+/***************************************/
+TEST_GROUP(readDir);
+/***************************************/
+
+romfs_dirent_t dirBuf[10];
+size_t dirBufUsed;
+
+TEST_SETUP(readDir)
+{
+    RomfsLoad(basic_romfs, basic_romfs_len);
+    memset(dirBuf, 0, sizeof(dirBuf));
+    dirBufUsed = 0;
+}
+
+TEST_TEAR_DOWN(readDir)
+{
+}
+
+TEST(readDir, ReadDirInvalidParams)
+{
+    int ret;
+
+    ret = RomfsReadDir(ROOT_FD, NULL, 10, 32, &dirBufUsed);
+    TEST_ASSERT_EQUAL_INT(-EINVAL, ret);
+
+    ret = RomfsReadDir(ROOT_FD, dirBuf, 10, 32, NULL);
+    TEST_ASSERT_EQUAL_INT(-EINVAL, ret);
+
+    ret = RomfsReadDir(ROOT_FD, NULL, 10, 32, NULL);
+    TEST_ASSERT_EQUAL_INT(-EINVAL, ret);
+}
+
+TEST(readDir, ReadDirBadFileDescriptor)
+{
+    int ret;
+
+    ret = RomfsReadDir(0, dirBuf, 10, 32, &dirBufUsed);
+    TEST_ASSERT_EQUAL_INT(-EBADF, ret);
+
+    ret = RomfsReadDir(9999, dirBuf, 10, 32, &dirBufUsed);
+    TEST_ASSERT_EQUAL_INT(-EBADF, ret);
+
+    ret = RomfsReadDir(8, dirBuf, 10, 32, &dirBufUsed);
+    TEST_ASSERT_EQUAL_INT(-EBADF, ret);
+}
+
+TEST(readDir, ReadDirNotDirectory)
+{
+    int ret;
+
+    ret = RomfsOpenAt(ROOT_FD, "a", 0);
+
+    ret = RomfsReadDir(ret, dirBuf, 10, 32, &dirBufUsed);
+    TEST_ASSERT_EQUAL_INT(-ENOTDIR, ret);
+}
+
+TEST(readDir, ReadDirRootDir)
+{
+    int ret;
+
+    ret = RomfsReadDir(ROOT_FD, dirBuf, 10, 0, &dirBufUsed);
+    TEST_ASSERT_EQUAL_INT(0, ret);
+
+    TEST_ASSERT_EQUAL_INT(4, dirBufUsed);
+
+    TEST_ASSERT_EQUAL_STRING_LEN(".", dirBuf[0].name, 1);
+    TEST_ASSERT_EQUAL_INT(1, dirBuf[0].nameLen);
+    TEST_ASSERT_EQUAL_HEX(ROOT_OFFSET, dirBuf[0].inode);
+    TEST_ASSERT_EQUAL_HEX(SECOND_ENTRY_ROOT_OFF, dirBuf[0].next);
+    TEST_ASSERT(IS_DIRECTORY(dirBuf[0].type));
+
+    TEST_ASSERT_EQUAL_STRING_LEN("..", dirBuf[1].name, 2);
+    TEST_ASSERT_EQUAL_INT(2, dirBuf[1].nameLen);
+    TEST_ASSERT_EQUAL_HEX(SECOND_ENTRY_ROOT_OFF, dirBuf[1].inode);
+    TEST_ASSERT_EQUAL_HEX(DIR_OFFSET, dirBuf[1].next);
+    TEST_ASSERT(IS_HARDLINK(dirBuf[1].type));
+
+    TEST_ASSERT_EQUAL_STRING_LEN("dir", dirBuf[2].name, 3);
+    TEST_ASSERT_EQUAL_INT(3, dirBuf[2].nameLen);
+    TEST_ASSERT_EQUAL_HEX(DIR_OFFSET, dirBuf[2].inode);
+    TEST_ASSERT_EQUAL_HEX(A_FILE_OFFSET, dirBuf[2].next);
+    TEST_ASSERT(IS_DIRECTORY(dirBuf[2].type));
+
+    TEST_ASSERT_EQUAL_STRING_LEN("a", dirBuf[3].name, 1);
+    TEST_ASSERT_EQUAL_INT(1, dirBuf[3].nameLen);
+    TEST_ASSERT_EQUAL_HEX(A_FILE_OFFSET, dirBuf[3].inode);
+    TEST_ASSERT_EQUAL_HEX(0x0, dirBuf[3].next);
+    TEST_ASSERT(IS_FILE(dirBuf[3].type));
+}
+
+TEST(readDir, ReadDirInDir)
+{
+    int ret;
+
+    ret = RomfsOpenAt(ROOT_FD, "dir", 0);
+
+    ret = RomfsReadDir(ret, dirBuf, 10, 0, &dirBufUsed);
+    TEST_ASSERT_EQUAL_INT(0, ret);
+
+    TEST_ASSERT_EQUAL_INT(3, dirBufUsed);
+
+    TEST_ASSERT_EQUAL_STRING_LEN("..", dirBuf[0].name, 2);
+    TEST_ASSERT_EQUAL_INT(2, dirBuf[0].nameLen);
+    TEST_ASSERT_EQUAL_HEX(FIRST_ENTRY_IN_DIR, dirBuf[0].inode);
+    TEST_ASSERT_EQUAL_HEX(B_FILE_OFFSET, dirBuf[0].next);
+    TEST_ASSERT(IS_HARDLINK(dirBuf[0].type));
+
+    TEST_ASSERT_EQUAL_STRING_LEN("b", dirBuf[1].name, 1);
+    TEST_ASSERT_EQUAL_INT(1, dirBuf[1].nameLen);
+    TEST_ASSERT_EQUAL_HEX(B_FILE_OFFSET, dirBuf[1].inode);
+    TEST_ASSERT_EQUAL_HEX(DIR_IN_DIR_OFFSET, dirBuf[1].next);
+    TEST_ASSERT(IS_FILE(dirBuf[1].type));
+
+    TEST_ASSERT_EQUAL_STRING_LEN(".", dirBuf[2].name, 1);
+    TEST_ASSERT_EQUAL_INT(1, dirBuf[2].nameLen);
+    TEST_ASSERT_EQUAL_HEX(DIR_IN_DIR_OFFSET, dirBuf[2].inode);
+    TEST_ASSERT_EQUAL_HEX(0x0, dirBuf[2].next);
+    TEST_ASSERT(IS_HARDLINK(dirBuf[2].type));
+}
+
+TEST(readDir, ReadDirUsingCookie)
+{
+    int ret;
+
+    ret = RomfsReadDir(ROOT_FD, dirBuf, 2, 0, &dirBufUsed);
+    TEST_ASSERT_EQUAL_INT(0, ret);
+
+    TEST_ASSERT_EQUAL_INT(2, dirBufUsed);
+
+    TEST_ASSERT_EQUAL_STRING_LEN(".", dirBuf[0].name, 1);
+    TEST_ASSERT_EQUAL_STRING_LEN("..", dirBuf[1].name, 2);
+
+    ret = RomfsReadDir(ROOT_FD, dirBuf, 3, dirBuf[1].next, &dirBufUsed);
+    TEST_ASSERT_EQUAL_INT(0, ret);
+
+    TEST_ASSERT_EQUAL_INT(2, dirBufUsed);
+
+    TEST_ASSERT_EQUAL_STRING_LEN("dir", dirBuf[0].name, 3);
+    TEST_ASSERT_EQUAL_STRING_LEN("a", dirBuf[1].name, 1);
+}
+
+TEST_GROUP_RUNNER(readDir)
+{
+    RUN_TEST_CASE(readDir, ReadDirInvalidParams);
+    RUN_TEST_CASE(readDir, ReadDirBadFileDescriptor);
+    RUN_TEST_CASE(readDir, ReadDirNotDirectory);
+    RUN_TEST_CASE(readDir, ReadDirRootDir);
+    RUN_TEST_CASE(readDir, ReadDirInDir);
+    RUN_TEST_CASE(readDir, ReadDirUsingCookie);
 }

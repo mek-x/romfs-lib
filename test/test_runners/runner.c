@@ -13,7 +13,8 @@ static void runAllTests(void)
     RUN_TEST_GROUP(stat);
     RUN_TEST_GROUP(open);
     RUN_TEST_GROUP(close);
-    RUN_TEST_GROUP(read);
+    RUN_TEST_GROUP(readFile);
+    RUN_TEST_GROUP(readDir);
 }
 
 int main(int argc, const char* argv[])

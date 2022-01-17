@@ -59,7 +59,7 @@ int RomfsLoad(uint8_t * img, size_t imgSize)
 
 int RomfsFdStat(int fd)
 {
-    int file = fd - 3; // subs the stdin, stdout and stderr
+    int file = fd - RESVD_FDS;
 
     if (file < 0 || file > MAX_OPEN) {
         return -EBADF;
@@ -136,4 +136,53 @@ int RomfsRead(int fd, void *buf, size_t nbyte)
     fildes[fd].cur += nbyte;
 
     return nbyte;
+}
+
+/* TODO:
+    - follow hardlinks
+    - cookie can be bad
+*/
+int RomfsReadDir(int fd, romfs_dirent_t *buf, size_t bufLen, uint32_t cookie, size_t *bufUsed)
+{
+    nodehdr_t curNode;
+    int ret;
+
+    fd = fd - RESVD_FDS;
+
+    if (buf == NULL || bufUsed == NULL) {
+        return -EINVAL;
+    }
+
+    if (fd < 0 || fd > MAX_OPEN || !fildes[fd].opened) {
+        return -EBADF;
+    }
+
+    if (!IS_DIRECTORY(fildes[fd].node.mode)) {
+        return -ENOTDIR;
+    }
+
+    if (cookie == 0) {
+        cookie = fildes[fd].node.info;
+    }
+
+    ret = RomfsGetNodeHdr(&romfs, cookie, &curNode);
+    if (ret < 0) {
+        return -EINVAL;
+    }
+
+    for (*bufUsed = 0; *bufUsed < bufLen; (*bufUsed)++) {
+        buf[*bufUsed].name    = curNode.name;
+        buf[*bufUsed].nameLen = strlen(curNode.name);
+        buf[*bufUsed].inode   = curNode.off;
+        buf[*bufUsed].next    = curNode.next;
+        buf[*bufUsed].type    = curNode.mode & ROMFS_TYPE_MASK;
+
+        ret = RomfsGetNodeHdr(&romfs, curNode.next, &curNode);
+        if (ret < 0) {
+            (*bufUsed)++;
+            break;
+        }
+    }
+
+    return 0;
 }
