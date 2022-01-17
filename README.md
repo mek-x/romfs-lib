@@ -3,8 +3,7 @@
 [![Build and test](https://github.com/mek-x/romfs-lib/actions/workflows/cmake.yml/badge.svg)](https://github.com/mek-x/romfs-lib/actions/workflows/cmake.yml)
 [![CodeQL](https://github.com/mek-x/romfs-lib/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/mek-x/romfs-lib/actions/workflows/codeql-analysis.yml)
 
-Simple library for reading the romfs images. Only using static memory allocation.
-For use in embedded environments.
+Simple library for reading the romfs images. Only using static memory allocation. For use in embedded environments.
 
 ## ToDo
 
@@ -15,3 +14,5 @@ For use in embedded environments.
 - [x] read
 - [ ] seek (lseek)
 - [x] read dir
+- [ ] ReadNodeHdr - check for bad offset, maybe count checksum?
+- [ ] Checksum checking

@@ -1,22 +1,9 @@
-#include "unity_fixture.h"
+#include "common_test_defines.h"
 
-#include <errno.h>
-#include <string.h>
+/* GLOBALS */
 
-#include "romfs.h"
-#include "romfs-internal.h"
-
-#define ROOT_OFFSET           0x20
-#define DIR_OFFSET            0x60
-#define FIRST_ENTRY_IN_DIR    0x80
-#define A_FILE_OFFSET         0xF0
-#define B_FILE_OFFSET         0xA0
-
-extern unsigned char empty_romfs[];
-extern unsigned int empty_romfs_len;
-
-extern unsigned char basic_romfs[];
-extern unsigned int basic_romfs_len;
+romfs_t rm_basic;
+romfs_t rm_empty;
 
 /***************************************/
 TEST_GROUP(volume);
@@ -61,19 +48,17 @@ TEST_GROUP_RUNNER(volume)
 TEST_GROUP(nodes);
 /***************************************/
 
-romfs_t rm;
-
 TEST_SETUP(nodes)
 {
-    rm.img = empty_romfs;
-    rm.size = empty_romfs_len;
-    rm.vol.size = 96;
-    rm.vol.rootOff = ROOT_OFFSET;
+    rm_empty.img = empty_romfs;
+    rm_empty.size = empty_romfs_len;
+    rm_empty.vol.size = 96;
+    rm_empty.vol.rootOff = ROOT_OFFSET;
 }
 
 TEST_TEAR_DOWN(nodes)
 {
-    memset(&rm, 0, sizeof(rm));
+    memset(&rm_empty, 0, sizeof(rm_empty));
 }
 
 TEST(nodes, GetNodeHdrBadSize)
@@ -81,13 +66,13 @@ TEST(nodes, GetNodeHdrBadSize)
     nodehdr_t node;
     int ret;
 
-    rm.size = 0;
-    ret = RomfsGetNodeHdr(&rm, ROOT_OFFSET, &node);
+    rm_empty.size = 0;
+    ret = RomfsGetNodeHdr(&rm_empty, ROOT_OFFSET, &node);
     TEST_ASSERT_EQUAL_INT(-EINVAL, ret);
 
-    rm.size = empty_romfs_len;
-    rm.vol.size = 0;
-    ret = RomfsGetNodeHdr(&rm, ROOT_OFFSET, &node);
+    rm_empty.size = empty_romfs_len;
+    rm_empty.vol.size = 0;
+    ret = RomfsGetNodeHdr(&rm_empty, ROOT_OFFSET, &node);
     TEST_ASSERT_EQUAL_INT(-EINVAL, ret);
 }
 
@@ -95,7 +80,7 @@ TEST(nodes, GetNodeHdrCheckData)
 {
     nodehdr_t node;
 
-    int ret = RomfsGetNodeHdr(&rm, ROOT_OFFSET, &node);
+    int ret = RomfsGetNodeHdr(&rm_empty, ROOT_OFFSET, &node);
     TEST_ASSERT_EQUAL_INT(0, ret);
 
     TEST_ASSERT_EQUAL_STRING_LEN(".", node.name, 1);
@@ -112,7 +97,7 @@ TEST(nodes, FindEntryRoot)
     nodehdr_t node;
     int ret;
 
-    ret = RomfsFindEntry(&rm, ROOT_OFFSET, "/", &node);
+    ret = RomfsFindEntry(&rm_empty, ROOT_OFFSET, "/", &node);
     TEST_ASSERT_EQUAL_INT(0, ret);
 
     TEST_ASSERT_MESSAGE(IS_TYPE(ROMFS_TYPE_DIRECTORY, node.mode), "Root should be a directory");
@@ -123,7 +108,7 @@ TEST(nodes, FindEntryFollowHardlink)
     nodehdr_t node;
     int ret;
 
-    ret = RomfsFindEntry(&rm, ROOT_OFFSET, ".", &node);
+    ret = RomfsFindEntry(&rm_empty, ROOT_OFFSET, ".", &node);
     TEST_ASSERT_EQUAL_INT(0, ret);
 
     TEST_ASSERT_MESSAGE(IS_TYPE(ROMFS_TYPE_DIRECTORY, node.mode), "Root should be a directory");
@@ -142,8 +127,6 @@ TEST_GROUP_RUNNER(nodes)
 TEST_GROUP(path);
 /***************************************/
 
-romfs_t rm_basic;
-
 TEST_SETUP(path)
 {
     rm_basic.img = basic_romfs;
@@ -154,7 +137,7 @@ TEST_SETUP(path)
 
 TEST_TEAR_DOWN(path)
 {
-    memset(&rm_basic, 0, sizeof(rm));
+    memset(&rm_basic, 0, sizeof(rm_empty));
 }
 
 TEST(path, SearchDirNotFound)
