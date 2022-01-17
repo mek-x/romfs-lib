@@ -6,7 +6,12 @@
 #include "romfs.h"
 #include "romfs-internal.h"
 
-#define ROMFS_ROOT_OFFSET 0x20
+#define ROOT_OFFSET           0x20
+#define DIR_OFFSET            0x60
+#define FIRST_ENTRY_IN_DIR    0x80
+#define A_FILE_OFFSET         0xF0
+#define B_FILE_OFFSET         0xA0
+
 extern unsigned char empty_romfs[];
 extern unsigned int empty_romfs_len;
 
@@ -42,7 +47,7 @@ TEST(volume, VolumeConfigureGoodImg)
     TEST_ASSERT_EQUAL_INT(0, ret);
     TEST_ASSERT_EQUAL_STRING_LEN("empyt", vol.name, 5);
     TEST_ASSERT_EQUAL_INT(96, vol.size);
-    TEST_ASSERT_EQUAL_HEX(ROMFS_ROOT_OFFSET, vol.rootOff);
+    TEST_ASSERT_EQUAL_HEX(ROOT_OFFSET, vol.rootOff);
     TEST_ASSERT_EQUAL_HEX(0xC7B9AC8D, vol.chksum);
 }
 
@@ -63,7 +68,7 @@ TEST_SETUP(nodes)
     rm.img = empty_romfs;
     rm.size = empty_romfs_len;
     rm.vol.size = 96;
-    rm.vol.rootOff = ROMFS_ROOT_OFFSET;
+    rm.vol.rootOff = ROOT_OFFSET;
 }
 
 TEST_TEAR_DOWN(nodes)
@@ -77,12 +82,12 @@ TEST(nodes, GetNodeHdrBadSize)
     int ret;
 
     rm.size = 0;
-    ret = RomfsGetNodeHdr(&rm, ROMFS_ROOT_OFFSET, &node);
+    ret = RomfsGetNodeHdr(&rm, ROOT_OFFSET, &node);
     TEST_ASSERT_EQUAL_INT(-EINVAL, ret);
 
     rm.size = empty_romfs_len;
     rm.vol.size = 0;
-    ret = RomfsGetNodeHdr(&rm, ROMFS_ROOT_OFFSET, &node);
+    ret = RomfsGetNodeHdr(&rm, ROOT_OFFSET, &node);
     TEST_ASSERT_EQUAL_INT(-EINVAL, ret);
 }
 
@@ -90,7 +95,7 @@ TEST(nodes, GetNodeHdrCheckData)
 {
     nodehdr_t node;
 
-    int ret = RomfsGetNodeHdr(&rm, ROMFS_ROOT_OFFSET, &node);
+    int ret = RomfsGetNodeHdr(&rm, ROOT_OFFSET, &node);
     TEST_ASSERT_EQUAL_INT(0, ret);
 
     TEST_ASSERT_EQUAL_STRING_LEN(".", node.name, 1);
@@ -107,7 +112,7 @@ TEST(nodes, FindEntryRoot)
     nodehdr_t node;
     int ret;
 
-    ret = RomfsFindEntry(&rm, ROMFS_ROOT_OFFSET, "/", &node);
+    ret = RomfsFindEntry(&rm, ROOT_OFFSET, "/", &node);
     TEST_ASSERT_EQUAL_INT(0, ret);
 
     TEST_ASSERT_MESSAGE(IS_TYPE(ROMFS_TYPE_DIRECTORY, node.mode), "Root should be a directory");
@@ -118,7 +123,7 @@ TEST(nodes, FindEntryFollowHardlink)
     nodehdr_t node;
     int ret;
 
-    ret = RomfsFindEntry(&rm, ROMFS_ROOT_OFFSET, ".", &node);
+    ret = RomfsFindEntry(&rm, ROOT_OFFSET, ".", &node);
     TEST_ASSERT_EQUAL_INT(0, ret);
 
     TEST_ASSERT_MESSAGE(IS_TYPE(ROMFS_TYPE_DIRECTORY, node.mode), "Root should be a directory");
@@ -144,7 +149,7 @@ TEST_SETUP(path)
     rm_basic.img = basic_romfs;
     rm_basic.size = basic_romfs_len;
     rm_basic.vol.size = 288;
-    rm_basic.vol.rootOff = ROMFS_ROOT_OFFSET;
+    rm_basic.vol.rootOff = ROOT_OFFSET;
 }
 
 TEST_TEAR_DOWN(path)
@@ -155,7 +160,7 @@ TEST_TEAR_DOWN(path)
 TEST(path, SearchDirNotFound)
 {
     int ret;
-    uint32_t offset = ROMFS_ROOT_OFFSET;
+    uint32_t offset = ROOT_OFFSET;
 
     ret = RomfsSearchDir(&rm_basic, "not_a_file", &offset);
     TEST_ASSERT_EQUAL_INT(-ENOENT, ret);
@@ -164,12 +169,23 @@ TEST(path, SearchDirNotFound)
 TEST(path, SearchDirFoundFile)
 {
     int ret;
-    uint32_t offset = ROMFS_ROOT_OFFSET;
+    uint32_t offset = ROOT_OFFSET;
 
     ret = RomfsSearchDir(&rm_basic, "a", &offset);
     TEST_ASSERT_EQUAL_INT(0, ret);
 
-    TEST_ASSERT_EQUAL_HEX(0xf0, offset);
+    TEST_ASSERT_EQUAL_HEX(A_FILE_OFFSET, offset);
+}
+
+TEST(path, SearchDirFoundFileInDir)
+{
+    int ret;
+    uint32_t offset = FIRST_ENTRY_IN_DIR;
+
+    ret = RomfsSearchDir(&rm_basic, "b", &offset);
+    TEST_ASSERT_EQUAL_INT(0, ret);
+
+    TEST_ASSERT_EQUAL_HEX(B_FILE_OFFSET, offset);
 }
 
 TEST(path, ParsePathEmpty)
@@ -186,14 +202,29 @@ TEST(path, ParsePathEmpty)
 
 TEST(path, ParsePathRoot)
 {
-    char *path = "/";
-    filename_t parsed[1];
+    filename_t parsed[2];
     int ret;
 
-    ret = RomfsParsePath(path, parsed, 1);
+    ret = RomfsParsePath("/", parsed, 2);
     TEST_ASSERT_EQUAL_INT(1, ret);
 
-    TEST_ASSERT_EQUAL_STRING("/", parsed[0]);
+    TEST_ASSERT_EQUAL_STRING(".", parsed[0]);
+
+    ret = RomfsParsePath("///", parsed, 2);
+    TEST_ASSERT_EQUAL_INT(1, ret);
+
+    TEST_ASSERT_EQUAL_STRING(".", parsed[0]);
+
+    ret = RomfsParsePath("./", parsed, 2);
+    TEST_ASSERT_EQUAL_INT(1, ret);
+
+    TEST_ASSERT_EQUAL_STRING(".", parsed[0]);
+
+    ret = RomfsParsePath("./.", parsed, 2);
+    TEST_ASSERT_EQUAL_INT(2, ret);
+
+    TEST_ASSERT_EQUAL_STRING(".", parsed[0]);
+    TEST_ASSERT_EQUAL_STRING(".", parsed[1]);
 }
 
 TEST(path, ParsePathPathTooLong)
@@ -238,7 +269,7 @@ TEST(path, ParsePathFileInRootDir)
     ret = RomfsParsePath(path, parsed, 2);
     TEST_ASSERT_EQUAL_INT(2, ret);
 
-    TEST_ASSERT_EQUAL_STRING("/", parsed[0]);
+    TEST_ASSERT_EQUAL_STRING(".", parsed[0]);
     TEST_ASSERT_EQUAL_STRING("file", parsed[1]);
 }
 
@@ -270,8 +301,45 @@ TEST(path, FindEntryFileNotFound)
     nodehdr_t node;
     int ret;
 
-    ret = RomfsFindEntry(&rm_basic, ROMFS_ROOT_OFFSET, "not_a_file", &node);
+    ret = RomfsFindEntry(&rm_basic, ROOT_OFFSET, "not_a_file", &node);
     TEST_ASSERT_EQUAL_INT(-ENOENT, ret);
+
+    ret = RomfsFindEntry(&rm_basic, ROOT_OFFSET, "/...", &node);
+    TEST_ASSERT_EQUAL_INT(-ENOENT, ret);
+
+    ret = RomfsFindEntry(&rm_basic, ROOT_OFFSET, "dir/not_a_file", &node);
+    TEST_ASSERT_EQUAL_INT(-ENOENT, ret);
+}
+
+TEST(path, FindEntryRootDir)
+{
+    nodehdr_t node;
+    int ret;
+
+    ret = RomfsFindEntry(&rm_basic, ROOT_OFFSET, ".", &node);
+    TEST_ASSERT_EQUAL_INT(0, ret);
+
+    TEST_ASSERT_EQUAL_HEX(ROOT_OFFSET, node.off);
+
+    ret = RomfsFindEntry(&rm_basic, ROOT_OFFSET, "/", &node);
+    TEST_ASSERT_EQUAL_INT(0, ret);
+
+    TEST_ASSERT_EQUAL_HEX(ROOT_OFFSET, node.off);
+
+    ret = RomfsFindEntry(&rm_basic, ROOT_OFFSET, "./.", &node);
+    TEST_ASSERT_EQUAL_INT(0, ret);
+
+    TEST_ASSERT_EQUAL_HEX(ROOT_OFFSET, node.off);
+
+    ret = RomfsFindEntry(&rm_basic, ROOT_OFFSET, "/..", &node);
+    TEST_ASSERT_EQUAL_INT(0, ret);
+
+    TEST_ASSERT_EQUAL_HEX(ROOT_OFFSET, node.off);
+
+    ret = RomfsFindEntry(&rm_basic, ROOT_OFFSET, "/dir/../dir/..", &node);
+    TEST_ASSERT_EQUAL_INT(0, ret);
+
+    TEST_ASSERT_EQUAL_HEX(ROOT_OFFSET, node.off);
 }
 
 TEST(path, FindEntryFileFound)
@@ -279,10 +347,10 @@ TEST(path, FindEntryFileFound)
     nodehdr_t node;
     int ret;
 
-    ret = RomfsFindEntry(&rm_basic, ROMFS_ROOT_OFFSET, "a", &node);
+    ret = RomfsFindEntry(&rm_basic, ROOT_OFFSET, "a", &node);
     TEST_ASSERT_EQUAL_INT(0, ret);
 
-    TEST_ASSERT_EQUAL_HEX(0x110, node.dataOff);
+    TEST_ASSERT_EQUAL_HEX(A_FILE_OFFSET, node.off);
 }
 
 TEST(path, FindEntryFileInDirFound)
@@ -290,10 +358,10 @@ TEST(path, FindEntryFileInDirFound)
     nodehdr_t node;
     int ret;
 
-    ret = RomfsFindEntry(&rm_basic, ROMFS_ROOT_OFFSET, "dir/b", &node);
+    ret = RomfsFindEntry(&rm_basic, ROOT_OFFSET, "dir/b", &node);
     TEST_ASSERT_EQUAL_INT(0, ret);
 
-    TEST_ASSERT_EQUAL_HEX(0xc0, node.dataOff);
+    TEST_ASSERT_EQUAL_HEX(B_FILE_OFFSET, node.off);
 }
 
 TEST(path, FindEntryDirAbsolutePath)
@@ -301,16 +369,43 @@ TEST(path, FindEntryDirAbsolutePath)
     nodehdr_t node;
     int ret;
 
-    ret = RomfsFindEntry(&rm_basic, ROMFS_ROOT_OFFSET, "/dir", &node);
+    ret = RomfsFindEntry(&rm_basic, ROOT_OFFSET, "/dir", &node);
     TEST_ASSERT_EQUAL_INT(0, ret);
 
-    TEST_ASSERT_EQUAL_HEX(0x60, node.off);
+    TEST_ASSERT_EQUAL_HEX(DIR_OFFSET, node.off);
+}
+
+TEST(path, FindEntryDirRelativePath)
+{
+    nodehdr_t node;
+    int ret;
+
+    ret = RomfsFindEntry(&rm_basic, DIR_OFFSET, "b", &node);
+    TEST_ASSERT_EQUAL_INT(0, ret);
+
+    TEST_ASSERT_EQUAL_HEX(B_FILE_OFFSET, node.off);
+
+    ret = RomfsFindEntry(&rm_basic, DIR_OFFSET, "/b", &node);
+    TEST_ASSERT_EQUAL_INT(0, ret);
+
+    TEST_ASSERT_EQUAL_HEX(B_FILE_OFFSET, node.off);
+
+    ret = RomfsFindEntry(&rm_basic, DIR_OFFSET, "../a", &node);
+    TEST_ASSERT_EQUAL_INT(0, ret);
+
+    TEST_ASSERT_EQUAL_HEX(A_FILE_OFFSET, node.off);
+
+    ret = RomfsFindEntry(&rm_basic, DIR_OFFSET, "../dir/.././a", &node);
+    TEST_ASSERT_EQUAL_INT(0, ret);
+
+    TEST_ASSERT_EQUAL_HEX(A_FILE_OFFSET, node.off);
 }
 
 TEST_GROUP_RUNNER(path)
 {
     RUN_TEST_CASE(path, SearchDirNotFound);
     RUN_TEST_CASE(path, SearchDirFoundFile);
+    RUN_TEST_CASE(path, SearchDirFoundFileInDir);
     RUN_TEST_CASE(path, ParsePathEmpty);
     RUN_TEST_CASE(path, ParsePathRoot);
     RUN_TEST_CASE(path, ParsePathPathTooLong);
@@ -320,7 +415,9 @@ TEST_GROUP_RUNNER(path)
     RUN_TEST_CASE(path, ParsePathFileInDirRelative);
     RUN_TEST_CASE(path, ParsePathCountTheElementsInPath);
     RUN_TEST_CASE(path, FindEntryFileNotFound);
+    RUN_TEST_CASE(path, FindEntryRootDir);
     RUN_TEST_CASE(path, FindEntryFileFound);
     RUN_TEST_CASE(path, FindEntryFileInDirFound);
     RUN_TEST_CASE(path, FindEntryDirAbsolutePath);
+    RUN_TEST_CASE(path, FindEntryDirRelativePath);
 }

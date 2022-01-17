@@ -93,7 +93,7 @@ int RomfsSearchDir(const romfs_t *rm, const char *name, uint32_t *offset)
         if (strcmp(node.name, name) == 0) {
             *offset = off;
             return 0;
-    }
+        }
 
         off = node.next;
     }
@@ -126,13 +126,12 @@ int RomfsParsePath(const char *path, filename_t entryList[], size_t entryListLen
         entryList[0][0] = '\0';
     }
 
-    // remove initial / and set first element to indicate absolute path
+    // remove initial / and set first element to indicate current dir
     if (*p == '/') {
         if (entryList != NULL) {
-            strcpy(entryList[0], "/");
+            strcpy(entryList[0], ".");
         }
         ret = 1;
-        while (*p == '/') {p++;}
     }
 
     p = strtok(p, "/");
@@ -161,33 +160,60 @@ int RomfsFindEntry(const romfs_t *rm, uint32_t offset, const char* path, nodehdr
     d = RomfsParsePath(path, pathList, 10);
     if (d < 0) return d;
 
+    ret = RomfsGetNodeHdr(rm, offset, nd);
+    if (ret < 0) {
+        return ret;
+    }
+
     for (int i = 0; i < d; i++) {
-        if (pathList[i][0] == '/') { //special case for root dir
-            offset = rm->vol.rootOff;
-        } else {
-            ret = RomfsSearchDir(rm, pathList[i], &offset);
-            ROMFS_TRACE("%s -> %d (%x)", pathList[i], ret, offset);
+        ROMFS_TRACE("[%d] \"%s\"", i, pathList[i]);
+        ROMFS_TRACE("node?: 0x%x ->0x%x", nd->mode, nd->off);
+
+        if (IS_HARDLINK(nd->mode)) {
+            ret = FollowHardlinks(rm, offset, &offset);
             if (ret < 0) {
                 return ret;
+            } else if (ret == LINK_FOLLOWED) {
+                ROMFS_TRACE("link followed -> 0x%x", offset);
             }
         }
+
         ret = RomfsGetNodeHdr(rm, offset, nd);
         if (ret < 0) {
             return ret;
         }
 
-        ROMFS_TRACE("[%d] \"%s\" 0x%x ->0x%x", i, pathList[i], nd->mode, offset);
-
         if (IS_DIRECTORY(nd->mode)) {
             offset = nd->info;
-        } else if (IS_HARDLINK(nd->mode)) {
-            ret = FollowHardlinks(rm, offset, &offset);
-            if (ret < 0) return ret;
-            else if (ret == LINK_FOLLOWED) ROMFS_TRACE("followed hardlink");
+        }
+
+        ret = RomfsSearchDir(rm, pathList[i], &offset);
+        ROMFS_TRACE("search: %d (0x%x)", ret, offset);
+        if (ret < 0) {
+            return ret;
+        }
+
+        ret = RomfsGetNodeHdr(rm, offset, nd);
+        if (ret < 0) {
+            return ret;
+        }
+
+        ROMFS_TRACE("node: 0x%x ->0x%x", nd->mode, nd->off);
+    }
+
+    if (IS_HARDLINK(nd->mode)) {
+        ret = FollowHardlinks(rm, offset, &offset);
+        if (ret < 0) {
+            return ret;
+        } else if (ret == LINK_FOLLOWED) {
+            ROMFS_TRACE("link followed -> 0x%x", offset);
+            ret = RomfsGetNodeHdr(rm, offset, nd);
+            if (ret < 0) {
+                return ret;
+            }
         }
     }
 
-   // ret = RomfsGetNodeHdr(rm, offset, nd);
-
+    ROMFS_TRACE("---");
     return ret;
 }
