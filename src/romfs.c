@@ -1,12 +1,14 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <errno.h>
+#include <string.h>
 
 #include "romfs-internal.h"
 
 static romfs_t romfs;
 
-#define MAX_OPEN 10
+#define MAX_OPEN    20  ///> Max number of open files at once. Root is preopened
+#define RESVD_FDS   3   ///> Count of reserved file descriptor numbers: stdin, stdout, stderr
 
 #define YES 1
 #define NO 0
@@ -16,9 +18,21 @@ static struct {
     nodehdr_t node;
 } fildes[MAX_OPEN];
 
+static
+int FindFirstClosedFd()
+{
+    for (int i = 0; i < MAX_OPEN; i++) {
+        if (!fildes[i].opened) {
+            return i;
+        }
+    }
+    return -EMFILE;
+}
+
 /* PUBLIC functions */
 
-int RomfsLoad(uint8_t * img, size_t imgSize) {
+int RomfsLoad(uint8_t * img, size_t imgSize)
+{
     int ret = 0;
 
     romfs.img = img;
@@ -32,6 +46,8 @@ int RomfsLoad(uint8_t * img, size_t imgSize) {
         romfs.vol.size,
         romfs.vol.rootOff);
 
+    memset(&fildes, 0, sizeof(fildes));
+
     // preopen root dir as first file descriptor
     ret = RomfsGetNodeHdr(&romfs, romfs.vol.rootOff, &fildes[0].node);
     fildes[0].opened = YES;
@@ -41,7 +57,7 @@ int RomfsLoad(uint8_t * img, size_t imgSize) {
 
 int RomfsFdStat(int fd)
 {
-    int file = fd - 3;
+    int file = fd - 3; // subs the stdin, stdout and stderr
 
     if (file < 0 || file > MAX_OPEN) {
         return -EBADF;
@@ -56,6 +72,20 @@ int RomfsFdStat(int fd)
 
 int RomfsOpenAt(int fd, const char *path, int flags)
 {
+    int ret, f;
 
-    return -EACCES;
+    fd = fd - RESVD_FDS;
+
+    if (fd < 0) return -EBADF;
+
+    f = FindFirstClosedFd();
+    if (f < 0) return f;
+
+    ret = RomfsFindEntry(&romfs, fildes[fd].node.off, path, &fildes[f].node);
+    if (ret < 0) {
+        return ret;
+    }
+
+    fildes[f].opened = YES;
+    return f + RESVD_FDS; // map file descriptor to number higher than reserved fds
 }

@@ -7,6 +7,7 @@ static void runAllTests(void)
 {
     RUN_TEST_GROUP(load);
     RUN_TEST_GROUP(stat);
+    RUN_TEST_GROUP(open);
 
     RUN_TEST_GROUP(volume);
     RUN_TEST_GROUP(nodes);
