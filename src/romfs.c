@@ -89,3 +89,16 @@ int RomfsOpenAt(int fd, const char *path, int flags)
     fildes[f].opened = YES;
     return f + RESVD_FDS; // map file descriptor to number higher than reserved fds
 }
+
+int RomfsClose(int fd)
+{
+    fd = fd - RESVD_FDS;
+
+    if (fd < 0 || fd > MAX_OPEN || !fildes[fd].opened) {
+        return -EBADF;
+    }
+
+    fildes[fd].opened = NO;
+
+    return 0;
+}

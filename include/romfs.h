@@ -28,3 +28,4 @@ int RomfsFdStat(int fd);
 #define ROMFS_O_FLAGS_NONBLOCK  (1 << 0)
 
 int RomfsOpenAt(int fd, const char *path, int flags);
+int RomfsClose(int fd);

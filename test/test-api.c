@@ -208,3 +208,46 @@ TEST_GROUP_RUNNER(open)
     RUN_TEST_CASE(open, OpenAtPathWithHardlinks);
     RUN_TEST_CASE(open, OpenAtRelativePath);
 }
+
+/***************************************/
+TEST_GROUP(close);
+/***************************************/
+
+int openedFd;
+
+TEST_SETUP(close)
+{
+    RomfsLoad(basic_romfs, basic_romfs_len);
+    openedFd = RomfsOpenAt(ROOT_FD, "a", 0);
+}
+
+TEST_TEAR_DOWN(close)
+{
+}
+
+TEST(close, CloseClosedFile)
+{
+    int ret = RomfsClose(openedFd+1);
+    TEST_ASSERT_EQUAL_INT(-EBADF, ret);
+}
+
+TEST(close, CloseFile)
+{
+    int ret;
+
+    ret = RomfsFdStat(openedFd);
+    TEST_ASSERT(IS_FILE(ret));
+
+    ret = RomfsClose(openedFd);
+    TEST_ASSERT_EQUAL_INT(0, ret);
+
+    ret = RomfsFdStat(openedFd);
+    TEST_ASSERT_EQUAL_INT(-EBADF, ret);
+}
+
+
+TEST_GROUP_RUNNER(close)
+{
+    RUN_TEST_CASE(close, CloseFile);
+    RUN_TEST_CASE(close, CloseClosedFile);
+}
