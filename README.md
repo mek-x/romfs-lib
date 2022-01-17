@@ -11,5 +11,5 @@ For use in embedded environments.
 - [x] get file mode
 - [x] open
 - [x] close
-- [ ] read
+- [x] read
 - [ ] read dir

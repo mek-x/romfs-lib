@@ -14,8 +14,9 @@ static romfs_t romfs;
 #define NO 0
 
 static struct {
-    uint8_t opened;
-    nodehdr_t node;
+    uint8_t     opened;
+    nodehdr_t   node;
+    void        *cur;
 } fildes[MAX_OPEN];
 
 static
@@ -51,6 +52,7 @@ int RomfsLoad(uint8_t * img, size_t imgSize)
     // preopen root dir as first file descriptor
     ret = RomfsGetNodeHdr(&romfs, romfs.vol.rootOff, &fildes[0].node);
     fildes[0].opened = YES;
+    fildes[0].cur = (void *)(romfs.img + fildes[0].node.dataOff);
 
     return ret;
 }
@@ -87,6 +89,8 @@ int RomfsOpenAt(int fd, const char *path, int flags)
     }
 
     fildes[f].opened = YES;
+    fildes[f].cur = (void *)(romfs.img + fildes[f].node.dataOff);
+
     return f + RESVD_FDS; // map file descriptor to number higher than reserved fds
 }
 
@@ -101,4 +105,35 @@ int RomfsClose(int fd)
     fildes[fd].opened = NO;
 
     return 0;
+}
+
+int RomfsRead(int fd, void *buf, size_t nbyte)
+{
+    size_t toRead;
+
+    fd = fd - RESVD_FDS;
+
+    if (buf == NULL) {
+        return -EINVAL;
+    }
+
+    if (fd < 0 || fd > MAX_OPEN || !fildes[fd].opened) {
+        return -EBADF;
+    }
+
+    if (IS_DIRECTORY(fildes[fd].node.mode)) {
+        return -EISDIR;
+    }
+
+    toRead = (unsigned long)(romfs.img + fildes[fd].node.dataOff + fildes[fd].node.size) - (unsigned long)fildes[fd].cur;
+
+    if (nbyte > toRead) {
+        nbyte = toRead;
+    }
+
+    memcpy(buf, fildes[fd].cur, nbyte);
+
+    fildes[fd].cur += nbyte;
+
+    return nbyte;
 }

@@ -4,7 +4,7 @@
 
 #if DEBUG
 #   include <stdio.h>
-#   define ROMFS_TRACE(fmt, ...) fprintf(stderr, "[%s]: " fmt "\n", __FUNCTION__ , ##__VA_ARGS__)
+#   define ROMFS_TRACE(fmt, ...) fprintf(stderr, "[%s:%d]: " fmt "\n",__FUNCTION__ ,__LINE__ , ##__VA_ARGS__)
 #else
 #   define ROMFS_TRACE(fmt, ...)
 #endif

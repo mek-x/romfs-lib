@@ -251,3 +251,102 @@ TEST_GROUP_RUNNER(close)
     RUN_TEST_CASE(close, CloseFile);
     RUN_TEST_CASE(close, CloseClosedFile);
 }
+
+/***************************************/
+TEST_GROUP(read);
+/***************************************/
+
+TEST_SETUP(read)
+{
+    RomfsLoad(basic_romfs, basic_romfs_len);
+    openedFd = RomfsOpenAt(ROOT_FD, "a", 0);
+}
+
+TEST_TEAR_DOWN(read)
+{
+    RomfsClose(openedFd);
+}
+
+TEST(read, ReadBadFile)
+{
+    int r;
+    char buf[10];
+
+    r = RomfsRead(openedFd+1, buf, 10);
+    TEST_ASSERT_EQUAL_INT(-EBADF, r);
+
+    r = RomfsRead(0, buf, 10);
+    TEST_ASSERT_EQUAL_INT(-EBADF, r);
+}
+
+TEST(read, ReadBadParams)
+{
+    int r;
+
+    r = RomfsRead(openedFd, NULL, 10);
+    TEST_ASSERT_EQUAL_INT(-EINVAL, r);
+}
+
+TEST(read, ReadFile)
+{
+    char buf[10];
+
+    int r;
+    r = RomfsRead(openedFd, buf, 2);
+    TEST_ASSERT_EQUAL_INT(2, r);
+
+    TEST_ASSERT_EQUAL_STRING_LEN("aa", buf, 2);
+
+    r = RomfsRead(openedFd, buf, 2);
+    TEST_ASSERT_EQUAL_INT(2, r);
+
+    TEST_ASSERT_EQUAL_STRING_LEN("a\n", buf, 2);
+}
+
+TEST(read, ReadFileBiggerThanFileSize)
+{
+    char buf[10] = { 0 };
+
+    int r;
+    r = RomfsRead(openedFd, buf, 10);
+    TEST_ASSERT_EQUAL_INT(4, r);
+
+    TEST_ASSERT_EQUAL_MEMORY("aaa\n\0\0\0\0\0\0", buf, 10);
+}
+
+TEST(read, ReadFileOnceThenTryToOverflow)
+{
+    char buf[10] = { 0 };
+
+    int r;
+    r = RomfsRead(openedFd, buf, 2);
+    TEST_ASSERT_EQUAL_INT(2, r);
+
+    r = RomfsRead(openedFd, buf, 10);
+    TEST_ASSERT_EQUAL_INT(2, r);
+
+    TEST_ASSERT_EQUAL_MEMORY("a\n\0", buf, 3);
+}
+
+TEST(read, TryToReadFromDir)
+{
+    char buf[10] = { 0 };
+    int fd;
+    int r;
+
+    fd = RomfsOpenAt(3, "..", 0);
+    r = RomfsRead(fd, buf, 10);
+    TEST_ASSERT_EQUAL_INT(-EISDIR, r);
+
+    TEST_ASSERT_EQUAL_MEMORY("\0\0", buf, 2);
+}
+
+TEST_GROUP_RUNNER(read)
+{
+    RUN_TEST_CASE(read, ReadBadFile);
+    RUN_TEST_CASE(read, ReadBadParams);
+    RUN_TEST_CASE(read, ReadFile);
+    RUN_TEST_CASE(read, ReadFileBiggerThanFileSize);
+    RUN_TEST_CASE(read, ReadFileOnceThenTryToOverflow);
+    RUN_TEST_CASE(read, TryToReadFromDir);
+}
