@@ -344,6 +344,108 @@ TEST_GROUP_RUNNER(readFile)
 }
 
 /***************************************/
+TEST_GROUP(seek);
+/***************************************/
+
+TEST_SETUP(seek)
+{
+    RomfsLoad(basic_romfs, basic_romfs_len);
+    openedFd = RomfsOpenAt(ROOT_FD, "a", 0);
+}
+
+TEST_TEAR_DOWN(seek)
+{
+    RomfsClose(openedFd);
+}
+
+TEST(seek, SeekParamErrors) {
+    int ret;
+
+    ret = RomfsSeek(openedFd, 0, 3);
+    TEST_ASSERT_EQUAL_INT(-EINVAL, ret);
+
+    ret = RomfsSeek(ROOT_FD, 0, ROMFS_SEEK_SET);
+    TEST_ASSERT_EQUAL_INT(-EBADF, ret);
+
+    ret = RomfsSeek(10, 0, ROMFS_SEEK_SET);
+    TEST_ASSERT_EQUAL_INT(-EBADF, ret);
+
+    ret = RomfsSeek(openedFd, 10, 3);
+    TEST_ASSERT_EQUAL_INT(-EINVAL, ret);
+
+    ret = RomfsSeek(openedFd, -10, 3);
+    TEST_ASSERT_EQUAL_INT(-EINVAL, ret);
+}
+
+TEST(seek, SeekSet) {
+    int ret;
+    char buf[10];
+
+    ret = RomfsSeek(openedFd, 5, ROMFS_SEEK_SET);
+    TEST_ASSERT_EQUAL_INT(-EINVAL, ret);
+
+    ret = RomfsSeek(openedFd, -1, ROMFS_SEEK_SET);
+    TEST_ASSERT_EQUAL_INT(-EINVAL, ret);
+
+    ret = RomfsSeek(openedFd, 1, ROMFS_SEEK_SET);
+    TEST_ASSERT_EQUAL_INT(0, ret);
+
+    ret = RomfsRead(openedFd, buf, 10);
+    TEST_ASSERT_EQUAL_INT(3, ret);
+
+    TEST_ASSERT_EQUAL_STRING_LEN("aa\n", buf, 3);
+}
+
+TEST(seek, SeekCur) {
+    int ret;
+    char buf[10];
+
+    ret = RomfsRead(openedFd, buf, 1);
+    TEST_ASSERT_EQUAL_INT(1, ret);
+
+    ret = RomfsSeek(openedFd, -2, ROMFS_SEEK_CUR);
+    TEST_ASSERT_EQUAL_INT(-EINVAL, ret);
+
+    ret = RomfsSeek(openedFd, 4, ROMFS_SEEK_CUR);
+    TEST_ASSERT_EQUAL_INT(-EINVAL, ret);
+
+    ret = RomfsSeek(openedFd, -1, ROMFS_SEEK_CUR);
+    TEST_ASSERT_EQUAL_INT(0, ret);
+
+    ret = RomfsRead(openedFd, buf, 10);
+    TEST_ASSERT_EQUAL_INT(4, ret);
+
+    TEST_ASSERT_EQUAL_STRING_LEN("aaa\n", buf, 4);
+}
+
+TEST(seek, SeekEnd) {
+    int ret;
+    char buf[10];
+
+    ret = RomfsSeek(openedFd, 1, ROMFS_SEEK_END);
+    TEST_ASSERT_EQUAL_INT(-EINVAL, ret);
+
+    ret = RomfsSeek(openedFd, -5, ROMFS_SEEK_END);
+    TEST_ASSERT_EQUAL_INT(-EINVAL, ret);
+
+    ret = RomfsSeek(openedFd, -1, ROMFS_SEEK_END);
+    TEST_ASSERT_EQUAL_INT(0, ret);
+
+    ret = RomfsRead(openedFd, buf, 10);
+    TEST_ASSERT_EQUAL_INT(1, ret);
+
+    TEST_ASSERT_EQUAL_STRING_LEN("\n", buf, 1);
+}
+
+TEST_GROUP_RUNNER(seek)
+{
+    RUN_TEST_CASE(seek, SeekParamErrors);
+    RUN_TEST_CASE(seek, SeekSet);
+    RUN_TEST_CASE(seek, SeekCur);
+    RUN_TEST_CASE(seek, SeekEnd);
+}
+
+/***************************************/
 TEST_GROUP(readDir);
 /***************************************/
 
@@ -512,13 +614,13 @@ TEST(mapFile, MapError)
     size_t len;
     int ret;
 
-    ret = RomfsMapFile(&addr, &len, 0, 0);
+    ret = RomfsMapFile((void **)&addr, &len, 0, 0);
     TEST_ASSERT_EQUAL_INT(-EBADF, ret);
 
-    ret = RomfsMapFile(&addr, &len, openedFd, 100);
+    ret = RomfsMapFile((void **)&addr, &len, openedFd, 100);
     TEST_ASSERT_EQUAL_INT(-EINVAL, ret);
 
-    ret = RomfsMapFile(&addr, &len, ROOT_FD, 0);
+    ret = RomfsMapFile((void **)&addr, &len, ROOT_FD, 0);
     TEST_ASSERT_EQUAL_INT(-EACCES, ret);
 }
 
@@ -527,7 +629,7 @@ TEST(mapFile, BasicMap)
     uint8_t *addr;
     size_t len;
 
-    int ret = RomfsMapFile(&addr, &len, openedFd, 0);
+    int ret = RomfsMapFile((void **)&addr, &len, openedFd, 0);
     TEST_ASSERT_EQUAL_INT(0, ret);
 
     TEST_ASSERT_EQUAL_INT(4, len);
@@ -539,7 +641,7 @@ TEST(mapFile, MapWithOffset)
     uint8_t *addr;
     size_t len;
 
-    int ret = RomfsMapFile(&addr, &len, openedFd, 2);
+    int ret = RomfsMapFile((void **)&addr, &len, openedFd, 2);
     TEST_ASSERT_EQUAL_INT(0, ret);
 
     TEST_ASSERT_EQUAL_INT(2, len);

@@ -24,6 +24,12 @@
 
 #define ROMFS_O_FLAGS_NONBLOCK  (1 << 0)
 
+typedef enum {
+    ROMFS_SEEK_SET,
+    ROMFS_SEEK_CUR,
+    ROMFS_SEEK_END,
+} seek_t;
+
 typedef struct {
     uint32_t    next;
     uint32_t    inode;
@@ -37,5 +43,6 @@ int RomfsFdStat(int fd);
 int RomfsOpenAt(int fd, const char *path, int flags);
 int RomfsClose(int fd);
 int RomfsRead(int fd, void *buf, size_t nbyte);
+int RomfsSeek(int fd, long off, seek_t whence);
 int RomfsReadDir(int fd, romfs_dirent_t *buf, size_t bufLen, uint32_t cookie, size_t *bufUsed);
 int RomfsMapFile(void **addr, size_t *len, int fd, uint32_t off);

@@ -13,6 +13,8 @@ static romfs_t romfs;
 #define YES 1
 #define NO 0
 
+#define ABS(x)  ((x) < 0 ? -(x) : (x))
+
 static struct {
     uint8_t     opened;
     nodehdr_t   node;
@@ -126,9 +128,12 @@ int RomfsRead(int fd, void *buf, size_t nbyte)
     }
 
     toRead = (unsigned long)(romfs.img + fildes[fd].node.dataOff + fildes[fd].node.size) - (unsigned long)fildes[fd].cur;
-
     if (nbyte > toRead) {
         nbyte = toRead;
+    }
+
+    if (nbyte == 0) {
+        return 0;
     }
 
     memcpy(buf, fildes[fd].cur, nbyte);
@@ -136,6 +141,54 @@ int RomfsRead(int fd, void *buf, size_t nbyte)
     fildes[fd].cur += nbyte;
 
     return nbyte;
+}
+
+int RomfsSeek(int fd, long off, seek_t whence)
+{
+    fd = fd - RESVD_FDS;
+
+    if (fd < 0 || fd > MAX_OPEN || !fildes[fd].opened) {
+        return -EBADF;
+    }
+
+    if (!IS_FILE(fildes[fd].node.mode)) {
+        return -EBADF;
+    }
+
+    if (ABS(off) > fildes[fd].node.size) {
+        return -EINVAL;
+    }
+
+    ROMFS_TRACE("%p", fildes[fd].cur);
+
+    switch (whence)
+    {
+    case ROMFS_SEEK_SET:
+        if (off < 0) {
+            return -EINVAL;
+        }
+        fildes[fd].cur = (void *)(romfs.img + (fildes[fd].node.dataOff + off));
+        break;
+    case ROMFS_SEEK_CUR:
+        ROMFS_TRACE("%ld %p == %p --> %p", off, fildes[fd].cur + off,  romfs.img + fildes[fd].node.dataOff, romfs.img + fildes[fd].node.dataOff + fildes[fd].node.size);
+        if ( (fildes[fd].cur + off > (void *)(romfs.img + fildes[fd].node.dataOff + fildes[fd].node.size)) ||
+             (fildes[fd].cur + off < (void *)(romfs.img + fildes[fd].node.dataOff)) ) {
+            return -EINVAL;
+        }
+        fildes[fd].cur += off;
+        break;
+    case ROMFS_SEEK_END:
+        if (off > 0) {
+            return -EINVAL;
+        }
+        fildes[fd].cur = (void *)(romfs.img + (fildes[fd].node.dataOff + fildes[fd].node.size + off));
+        break;
+    default:
+        return -EINVAL;
+        break;
+    }
+
+    return 0;
 }
 
 /* TODO:

@@ -12,7 +12,7 @@ Simple library for reading the romfs images. Only using static memory allocation
 - [x] open
 - [x] close
 - [x] read
-- [ ] seek (lseek)
+- [x] seek
 - [x] read dir
 - [x] map file
 - [ ] ReadNodeHdr - check for bad offset, maybe count checksum?
