@@ -15,6 +15,7 @@ static void runAllTests(void)
     RUN_TEST_GROUP(close);
     RUN_TEST_GROUP(readFile);
     RUN_TEST_GROUP(readDir);
+    RUN_TEST_GROUP(mapFile);
 }
 
 int main(int argc, const char* argv[])

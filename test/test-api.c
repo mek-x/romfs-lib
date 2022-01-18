@@ -490,3 +490,65 @@ TEST_GROUP_RUNNER(readDir)
     RUN_TEST_CASE(readDir, ReadDirInDir);
     RUN_TEST_CASE(readDir, ReadDirUsingCookie);
 }
+
+/***************************************/
+TEST_GROUP(mapFile);
+/***************************************/
+
+TEST_SETUP(mapFile)
+{
+    RomfsLoad(basic_romfs, basic_romfs_len);
+    openedFd = RomfsOpenAt(ROOT_FD, "a", 0);
+}
+
+TEST_TEAR_DOWN(mapFile)
+{
+    RomfsClose(openedFd);
+}
+
+TEST(mapFile, MapError)
+{
+    uint8_t *addr;
+    size_t len;
+    int ret;
+
+    ret = RomfsMapFile(&addr, &len, 0, 0);
+    TEST_ASSERT_EQUAL_INT(-EBADF, ret);
+
+    ret = RomfsMapFile(&addr, &len, openedFd, 100);
+    TEST_ASSERT_EQUAL_INT(-EINVAL, ret);
+
+    ret = RomfsMapFile(&addr, &len, ROOT_FD, 0);
+    TEST_ASSERT_EQUAL_INT(-EACCES, ret);
+}
+
+TEST(mapFile, BasicMap)
+{
+    uint8_t *addr;
+    size_t len;
+
+    int ret = RomfsMapFile(&addr, &len, openedFd, 0);
+    TEST_ASSERT_EQUAL_INT(0, ret);
+
+    TEST_ASSERT_EQUAL_INT(4, len);
+    TEST_ASSERT_EQUAL_MEMORY("aaa\n", addr, len);
+}
+
+TEST(mapFile, MapWithOffset)
+{
+    uint8_t *addr;
+    size_t len;
+
+    int ret = RomfsMapFile(&addr, &len, openedFd, 2);
+    TEST_ASSERT_EQUAL_INT(0, ret);
+
+    TEST_ASSERT_EQUAL_INT(2, len);
+    TEST_ASSERT_EQUAL_MEMORY("a\n", addr, len);
+}
+
+TEST_GROUP_RUNNER(mapFile)
+{
+    RUN_TEST_CASE(mapFile, MapError);
+    RUN_TEST_CASE(mapFile, BasicMap);
+    RUN_TEST_CASE(mapFile, MapWithOffset);
+}

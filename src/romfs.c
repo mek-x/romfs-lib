@@ -186,3 +186,25 @@ int RomfsReadDir(int fd, romfs_dirent_t *buf, size_t bufLen, uint32_t cookie, si
 
     return 0;
 }
+
+int RomfsMapFile(void **addr, size_t *len, int fd, uint32_t off)
+{
+    fd = fd - RESVD_FDS;
+
+    if (fd < 0 || fd > MAX_OPEN || !fildes[fd].opened) {
+        return -EBADF;
+    }
+
+    if (!IS_FILE(fildes[fd].node.mode)) {
+        return -EACCES;
+    }
+
+    if (off >= fildes[fd].node.size) {
+        return -EINVAL;
+    }
+
+    *addr = romfs.img + (fildes[fd].node.dataOff + off);
+    *len = fildes[fd].node.size - off;
+
+    return 0;
+}
