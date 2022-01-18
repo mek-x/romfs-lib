@@ -59,20 +59,7 @@ int RomfsLoad(uint8_t * img, size_t imgSize)
     return ret;
 }
 
-int RomfsFdStat(int fd)
-{
-    int file = fd - RESVD_FDS;
 
-    if (file < 0 || file > MAX_OPEN) {
-        return -EBADF;
-    }
-
-    if (!fildes[file].opened) {
-        return -EBADF;
-    }
-
-    return fildes[file].node.mode;
-}
 
 int RomfsOpenAt(int fd, const char *path, int flags)
 {
@@ -109,6 +96,49 @@ int RomfsClose(int fd)
     return 0;
 }
 
+int RomfsFdStat(int fd, romfs_stat_t *stat)
+{
+    fd = fd - RESVD_FDS;
+
+    if (fd < 0 || fd > MAX_OPEN || !fildes[fd].opened) {
+        return -EBADF;
+    }
+
+    if (stat != NULL) {
+        stat->ino    = fildes[fd].node.off;
+        stat->chksum = fildes[fd].node.chksum;
+        stat->size   = fildes[fd].node.size;
+        stat->mode   = fildes[fd].node.mode;
+    }
+
+    return fildes[fd].node.mode;
+}
+
+int RomfsFdStatAt(int fd, const char *path, romfs_stat_t *stat) {
+    int ret;
+    nodehdr_t node;
+
+    fd = fd - RESVD_FDS;
+
+   if (fd < 0 || fd > MAX_OPEN || !fildes[fd].opened) {
+        return -EBADF;
+    }
+
+    ret = RomfsFindEntry(&romfs, fildes[fd].node.off, path, &node);
+    if (ret < 0) {
+        return ret;
+    }
+
+    if (stat != NULL) {
+        stat->ino    = node.off;
+        stat->chksum = node.chksum;
+        stat->size   = node.size;
+        stat->mode   = node.mode;
+    }
+
+    return node.mode;
+}
+
 int RomfsRead(int fd, void *buf, size_t nbyte)
 {
     size_t toRead;
@@ -143,7 +173,7 @@ int RomfsRead(int fd, void *buf, size_t nbyte)
     return nbyte;
 }
 
-int RomfsSeek(int fd, long off, seek_t whence)
+int RomfsSeek(int fd, long off, romfs_seek_t whence)
 {
     fd = fd - RESVD_FDS;
 

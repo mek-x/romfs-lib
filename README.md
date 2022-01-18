@@ -8,7 +8,7 @@ Simple library for reading the romfs images. Only using static memory allocation
 ## ToDo
 
 - [x] get file mode
-- [ ] fstatat
+- [x] fstatat
 - [x] open
 - [x] close
 - [x] read

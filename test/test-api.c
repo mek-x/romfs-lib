@@ -37,41 +37,6 @@ TEST_GROUP_RUNNER(load)
     RUN_TEST_CASE(load, LoadBadImage);
 }
 
-
-/***************************************/
-TEST_GROUP(stat);
-/***************************************/
-
-TEST_SETUP(stat)
-{
-    RomfsLoad(empty_romfs, empty_romfs_len);
-}
-
-TEST_TEAR_DOWN(stat)
-{
-}
-
-TEST(stat, StatCheckRootFd)
-{
-    int mode = RomfsFdStat(3);
-
-    TEST_ASSERT_MESSAGE(IS_DIRECTORY(mode), "type is not directory");
-}
-
-TEST(stat, StatCheckBadFd)
-{
-    int mode = RomfsFdStat(0);
-
-    TEST_ASSERT_EQUAL_INT_MESSAGE(-EBADF, mode, "expecting EBADF error");
-}
-
-TEST_GROUP_RUNNER(stat)
-{
-    RUN_TEST_CASE(stat, StatCheckRootFd);
-    RUN_TEST_CASE(stat, StatCheckBadFd);
-}
-
-
 /***************************************/
 TEST_GROUP(open);
 /***************************************/
@@ -110,7 +75,7 @@ TEST(open, OpenAtOpenFileAtRootAndCheckWhetherItsFile)
     int ret = RomfsOpenAt(ROOT_FD, "a", 0);
     TEST_ASSERT_EQUAL_INT(4, ret);
 
-    int mode = RomfsFdStat(ret);
+    int mode = RomfsFdStat(ret, NULL);
     TEST_ASSERT_MESSAGE(IS_FILE(mode), "Opened file should be a regular file");
 }
 
@@ -119,7 +84,7 @@ TEST(open, OpenAtOpenDirAtRootAndCheckWhetherItsDir)
     int ret = RomfsOpenAt(ROOT_FD, "/dir", 0);
     TEST_ASSERT_EQUAL_INT(4, ret);
 
-    int mode = RomfsFdStat(ret);
+    int mode = RomfsFdStat(ret, NULL);
     TEST_ASSERT_MESSAGE(IS_DIRECTORY(mode), "Opened file should be a directory");
 }
 
@@ -128,7 +93,7 @@ TEST(open, OpenAtOpenFileInDir)
     int ret = RomfsOpenAt(ROOT_FD, "dir/b", 0);
     TEST_ASSERT_EQUAL_INT(4, ret);
 
-    int mode = RomfsFdStat(ret);
+    int mode = RomfsFdStat(ret, NULL);
     TEST_ASSERT_MESSAGE(IS_FILE(mode), "Opened file should be a regular file");
 }
 
@@ -149,10 +114,10 @@ TEST(open, OpenAtDirAndFile)
     ret = RomfsOpenAt(ROOT_FD, "a", 0);
     TEST_ASSERT_EQUAL_INT(5, ret);
 
-    int mode = RomfsFdStat(4);
+    int mode = RomfsFdStat(4, NULL);
     TEST_ASSERT_MESSAGE(IS_DIRECTORY(mode), "Opened file should be a directory");
 
-    mode = RomfsFdStat(5);
+    mode = RomfsFdStat(5, NULL);
     TEST_ASSERT_MESSAGE(IS_FILE(mode), "Opened file should be a regular file");
 }
 
@@ -161,19 +126,19 @@ TEST(open, OpenAtPathWithHardlinks)
     int ret = RomfsOpenAt(ROOT_FD, "/dir/../a", 0);
     TEST_ASSERT_EQUAL_INT(4, ret);
 
-    int mode = RomfsFdStat(4);
+    int mode = RomfsFdStat(4, NULL);
     TEST_ASSERT_MESSAGE(IS_FILE(mode), "Opened file should be a regular file");
 
     ret = RomfsOpenAt(ROOT_FD, "../../dir/.././a", 0);
     TEST_ASSERT_EQUAL_INT(5, ret);
 
-    mode = RomfsFdStat(5);
+    mode = RomfsFdStat(5, NULL);
     TEST_ASSERT_MESSAGE(IS_FILE(mode), "Opened file should be a regular file");
 
     ret = RomfsOpenAt(ROOT_FD, "./dir", 0);
     TEST_ASSERT_EQUAL_INT(6, ret);
 
-    mode = RomfsFdStat(6);
+    mode = RomfsFdStat(6, NULL);
     TEST_ASSERT_MESSAGE(IS_DIRECTORY(mode), "Opened file should be a directory");
 }
 
@@ -185,7 +150,7 @@ TEST(open, OpenAtRelativePath)
     ret = RomfsOpenAt(ret, "b", 0);
     TEST_ASSERT_EQUAL_INT(5, ret);
 
-    int mode = RomfsFdStat(ret);
+    int mode = RomfsFdStat(ret, NULL);
     TEST_ASSERT_MESSAGE(IS_FILE(mode), "Opened file should be a regular file");
 }
 
@@ -227,13 +192,13 @@ TEST(close, CloseFile)
 {
     int ret;
 
-    ret = RomfsFdStat(openedFd);
+    ret = RomfsFdStat(openedFd, NULL);
     TEST_ASSERT(IS_FILE(ret));
 
     ret = RomfsClose(openedFd);
     TEST_ASSERT_EQUAL_INT(0, ret);
 
-    ret = RomfsFdStat(openedFd);
+    ret = RomfsFdStat(openedFd, NULL);
     TEST_ASSERT_EQUAL_INT(-EBADF, ret);
 }
 
@@ -242,6 +207,73 @@ TEST_GROUP_RUNNER(close)
 {
     RUN_TEST_CASE(close, CloseFile);
     RUN_TEST_CASE(close, CloseClosedFile);
+}
+
+/***************************************/
+TEST_GROUP(stat);
+/***************************************/
+
+TEST_SETUP(stat)
+{
+    RomfsLoad(basic_romfs, basic_romfs_len);
+}
+
+TEST_TEAR_DOWN(stat)
+{
+}
+
+TEST(stat, StatCheckBadFd)
+{
+    int mode = RomfsFdStat(0, NULL);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(-EBADF, mode, "expecting EBADF error");
+}
+
+TEST(stat, StatAtNoFile)
+{
+    int mode = RomfsFdStatAt(ROOT_FD, "x", NULL);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(-ENOENT, mode, "expecting ENOENT error");
+}
+
+TEST(stat, StatCheckRootFd)
+{
+    int mode = RomfsFdStat(ROOT_FD, NULL);
+
+    TEST_ASSERT_MESSAGE(IS_DIRECTORY(mode), "type is not directory");
+}
+
+TEST(stat, StatCheckMoreStats)
+{
+    romfs_stat_t stat;
+    int fd = RomfsOpenAt(ROOT_FD, "a", 0);
+
+    int mode = RomfsFdStat(fd, &stat);
+
+    TEST_ASSERT_MESSAGE(IS_FILE(mode), "type is not file");
+    TEST_ASSERT_MESSAGE(IS_FILE(stat.mode), "type is not file");
+    TEST_ASSERT_EQUAL_INT(4, stat.size);
+    TEST_ASSERT_EQUAL_HEX(0x9EFFFFFA, stat.chksum);
+    TEST_ASSERT_EQUAL_HEX(A_FILE_OFFSET, stat.ino);
+}
+
+TEST(stat, StatAtCheckMoreStats)
+{
+    romfs_stat_t stat;
+    int mode = RomfsFdStatAt(ROOT_FD, "dir/b", &stat);
+
+    TEST_ASSERT_MESSAGE(IS_FILE(mode), "type is not file");
+    TEST_ASSERT_MESSAGE(IS_FILE(stat.mode), "type is not file");
+    TEST_ASSERT_EQUAL_INT(4, stat.size);
+    TEST_ASSERT_EQUAL_HEX(0x9DFFFF2A, stat.chksum);
+    TEST_ASSERT_EQUAL_HEX(B_FILE_OFFSET, stat.ino);
+}
+
+TEST_GROUP_RUNNER(stat)
+{
+    RUN_TEST_CASE(stat, StatCheckBadFd);
+    RUN_TEST_CASE(stat, StatAtNoFile);
+    RUN_TEST_CASE(stat, StatCheckRootFd);
+    RUN_TEST_CASE(stat, StatCheckMoreStats);
+    RUN_TEST_CASE(stat, StatAtCheckMoreStats);
 }
 
 /***************************************/

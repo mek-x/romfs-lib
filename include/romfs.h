@@ -21,14 +21,22 @@
 #define IS_HARDLINK(mode)      IS_TYPE(ROMFS_TYPE_HARDLINK, (mode))
 #define IS_DIRECTORY(mode)     IS_TYPE(ROMFS_TYPE_DIRECTORY, (mode))
 #define IS_FILE(mode)          IS_TYPE(ROMFS_TYPE_FILE, (mode))
+#define IS_EXEC(mode)          (((mode)&(~ROMFS_TYPE_MASK)) == ROMFS_MODE_EXEC)
 
 #define ROMFS_O_FLAGS_NONBLOCK  (1 << 0)
+
+typedef struct {
+    uint32_t ino;
+    uint32_t size;
+    uint32_t chksum;
+    uint8_t  mode;
+} romfs_stat_t;
 
 typedef enum {
     ROMFS_SEEK_SET,
     ROMFS_SEEK_CUR,
     ROMFS_SEEK_END,
-} seek_t;
+} romfs_seek_t;
 
 typedef struct {
     uint32_t    next;
@@ -39,10 +47,11 @@ typedef struct {
 } romfs_dirent_t;
 
 int RomfsLoad(uint8_t * img, size_t imgSize);
-int RomfsFdStat(int fd);
 int RomfsOpenAt(int fd, const char *path, int flags);
 int RomfsClose(int fd);
+int RomfsFdStat(int fd, romfs_stat_t *stat);
+int RomfsFdStatAt(int fd, const char *path, romfs_stat_t *stat);
 int RomfsRead(int fd, void *buf, size_t nbyte);
-int RomfsSeek(int fd, long off, seek_t whence);
+int RomfsSeek(int fd, long off, romfs_seek_t whence);
 int RomfsReadDir(int fd, romfs_dirent_t *buf, size_t bufLen, uint32_t cookie, size_t *bufUsed);
 int RomfsMapFile(void **addr, size_t *len, int fd, uint32_t off);
