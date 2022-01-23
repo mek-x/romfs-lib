@@ -35,23 +35,19 @@ char *UtilsParsePathGetNext(const char *path, path_t buf, char **state) {
     return p;
 }
 
-int UtilsParsePath(const char *path, filename_t entryList[], size_t entryListLen)
+int UtilsCheckPath(const char *path)
 {
     int ret = 0;
     path_t buf;
     char *state;
     char *p;
 
-    if (entryListLen == 0 && entryList != NULL) {
+    if (path == NULL) {
         return -EINVAL;
     }
 
     if (strnlen(path, MAX_PATH_LEN) == MAX_PATH_LEN) {
         return -ENAMETOOLONG;
-    }
-
-    if (entryList != NULL) {
-        entryList[0][0] = '\0';
     }
 
     p = UtilsParsePathGetNext(path, buf, &state);
@@ -60,11 +56,7 @@ int UtilsParsePath(const char *path, filename_t entryList[], size_t entryListLen
             ret = -ENAMETOOLONG;
             break;
         }
-        if (entryList != NULL) {
-            if (ret < entryListLen) {
-                strncpy(entryList[ret], p, MAX_NAME_LEN);
-            } else break;
-        }
+
         ret++;
         p = UtilsParsePathGetNext(NULL, buf, &state);
     }

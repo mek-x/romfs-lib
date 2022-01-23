@@ -102,14 +102,15 @@ int RomfsSearchDir(const romfs_t *rm, const char *name, uint32_t *offset)
     return -ENOENT;
 }
 
-
-
 int RomfsFindEntry(const romfs_t *rm, uint32_t offset, const char* path, nodehdr_t *nd)
 {
     int d, ret;
-    filename_t pathList[10]; // what should be max depth? Maybe need to reengineer this...
+    path_t buf;
+    char *save;
+    char *cur;
 
-    d = UtilsParsePath(path, pathList, 10);
+    // just count elements and do some checks
+    d = UtilsCheckPath(path);
     if (d < 0) return d;
 
     ret = RomfsGetNodeHdr(rm, offset, nd);
@@ -117,9 +118,10 @@ int RomfsFindEntry(const romfs_t *rm, uint32_t offset, const char* path, nodehdr
         return ret;
     }
 
-    for (int i = 0; i < d; i++) {
-        ROMFS_TRACE("[%d] \"%s\"", i, pathList[i]);
-        ROMFS_TRACE("node?: 0x%x ->0x%x", nd->mode, nd->off);
+    cur = UtilsParsePathGetNext(path, buf, &save);
+    while (cur != NULL) {
+        ROMFS_TRACE("[files to parse: %d] \"%s\"", d--, cur);
+        ROMFS_TRACE("[node]: mode = 0x%x, off -> 0x%x", nd->mode, nd->off);
 
         if (IS_HARDLINK(nd->mode)) {
             ret = FollowHardlinks(rm, offset, &offset);
@@ -139,7 +141,7 @@ int RomfsFindEntry(const romfs_t *rm, uint32_t offset, const char* path, nodehdr
             offset = nd->info;
         }
 
-        ret = RomfsSearchDir(rm, pathList[i], &offset);
+        ret = RomfsSearchDir(rm, cur, &offset);
         ROMFS_TRACE("search: %d (0x%x)", ret, offset);
         if (ret < 0) {
             return ret;
@@ -150,7 +152,7 @@ int RomfsFindEntry(const romfs_t *rm, uint32_t offset, const char* path, nodehdr
             return ret;
         }
 
-        ROMFS_TRACE("node: 0x%x ->0x%x", nd->mode, nd->off);
+        cur = UtilsParsePathGetNext(NULL, buf, &save);
     }
 
     if (IS_HARDLINK(nd->mode)) {
