@@ -68,9 +68,12 @@ TEST(path, ParsePathPathTooLong)
 
 TEST(path, ParsePathNameTooLong)
 {
-    char path[] = "0123456789012345678901234567890";
+    char path[MAX_NAME_LEN+1];
     filename_t parsed[1];
     int ret;
+
+    memset(path, '0', sizeof(path));
+    path[MAX_NAME_LEN] = '\0';
 
     ret = UtilsParsePath(path, parsed, 1);
     TEST_ASSERT_EQUAL_INT(-ENAMETOOLONG, ret);
