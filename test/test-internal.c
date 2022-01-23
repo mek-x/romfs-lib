@@ -124,10 +124,10 @@ TEST_GROUP_RUNNER(nodes)
 }
 
 /***************************************/
-TEST_GROUP(path);
+TEST_GROUP(search);
 /***************************************/
 
-TEST_SETUP(path)
+TEST_SETUP(search)
 {
     rm_basic.img = basic_romfs;
     rm_basic.size = basic_romfs_len;
@@ -135,12 +135,12 @@ TEST_SETUP(path)
     rm_basic.vol.rootOff = ROOT_OFFSET;
 }
 
-TEST_TEAR_DOWN(path)
+TEST_TEAR_DOWN(search)
 {
     memset(&rm_basic, 0, sizeof(rm_empty));
 }
 
-TEST(path, SearchDirNotFound)
+TEST(search, SearchDirNotFound)
 {
     int ret;
     uint32_t offset = ROOT_OFFSET;
@@ -149,7 +149,7 @@ TEST(path, SearchDirNotFound)
     TEST_ASSERT_EQUAL_INT(-ENOENT, ret);
 }
 
-TEST(path, SearchDirFoundFile)
+TEST(search, SearchDirFoundFile)
 {
     int ret;
     uint32_t offset = ROOT_OFFSET;
@@ -160,7 +160,7 @@ TEST(path, SearchDirFoundFile)
     TEST_ASSERT_EQUAL_HEX(A_FILE_OFFSET, offset);
 }
 
-TEST(path, SearchDirFoundFileInDir)
+TEST(search, SearchDirFoundFileInDir)
 {
     int ret;
     uint32_t offset = FIRST_ENTRY_IN_DIR;
@@ -171,115 +171,37 @@ TEST(path, SearchDirFoundFileInDir)
     TEST_ASSERT_EQUAL_HEX(B_FILE_OFFSET, offset);
 }
 
-TEST(path, ParsePathEmpty)
+TEST_GROUP_RUNNER(search)
 {
-    char *path = "";
-    filename_t parsed[1];
-    int ret;
-
-    ret = RomfsParsePath(path, parsed, 1);
-    TEST_ASSERT_EQUAL_INT(0, ret);
-
-    TEST_ASSERT_EQUAL_STRING("", parsed[0]);
+    RUN_TEST_CASE(search, SearchDirNotFound);
+    RUN_TEST_CASE(search, SearchDirFoundFile);
+    RUN_TEST_CASE(search, SearchDirFoundFileInDir);
+    RUN_TEST_CASE(find, FindEntryFileNotFound);
+    RUN_TEST_CASE(find, FindEntryRootDir);
+    RUN_TEST_CASE(find, FindEntryFileFound);
+    RUN_TEST_CASE(find, FindEntryFileInDirFound);
+    RUN_TEST_CASE(find, FindEntryDirAbsolutePath);
+    RUN_TEST_CASE(find, FindEntryDirRelativePath);
 }
 
-TEST(path, ParsePathRoot)
+/***************************************/
+TEST_GROUP(find);
+/***************************************/
+
+TEST_SETUP(find)
 {
-    filename_t parsed[2];
-    int ret;
-
-    ret = RomfsParsePath("/", parsed, 2);
-    TEST_ASSERT_EQUAL_INT(1, ret);
-
-    TEST_ASSERT_EQUAL_STRING(".", parsed[0]);
-
-    ret = RomfsParsePath("///", parsed, 2);
-    TEST_ASSERT_EQUAL_INT(1, ret);
-
-    TEST_ASSERT_EQUAL_STRING(".", parsed[0]);
-
-    ret = RomfsParsePath("./", parsed, 2);
-    TEST_ASSERT_EQUAL_INT(1, ret);
-
-    TEST_ASSERT_EQUAL_STRING(".", parsed[0]);
-
-    ret = RomfsParsePath("./.", parsed, 2);
-    TEST_ASSERT_EQUAL_INT(2, ret);
-
-    TEST_ASSERT_EQUAL_STRING(".", parsed[0]);
-    TEST_ASSERT_EQUAL_STRING(".", parsed[1]);
+    rm_basic.img = basic_romfs;
+    rm_basic.size = basic_romfs_len;
+    rm_basic.vol.size = 288;
+    rm_basic.vol.rootOff = ROOT_OFFSET;
 }
 
-TEST(path, ParsePathPathTooLong)
+TEST_TEAR_DOWN(find)
 {
-    char path[400];
-    filename_t parsed[1];
-    int ret;
-
-    memset(path, '/', 399);
-    path[399] = '\0';
-
-    ret = RomfsParsePath(path, parsed, 1);
-    TEST_ASSERT_EQUAL_INT(-ENAMETOOLONG, ret);
+    memset(&rm_basic, 0, sizeof(rm_empty));
 }
 
-TEST(path, ParsePathNameTooLong)
-{
-    char path[] = "0123456789012345678901234567890";
-    filename_t parsed[1];
-    int ret;
-
-    ret = RomfsParsePath(path, parsed, 1);
-    TEST_ASSERT_EQUAL_INT(-ENAMETOOLONG, ret);
-}
-
-TEST(path, ParsePathArrayLenHasToBeBiggerThan0)
-{
-    int ret;
-    char *path = "";
-    filename_t parsed[1];
-
-    ret = RomfsParsePath(path, parsed, 0);
-    TEST_ASSERT_EQUAL_INT(-EINVAL, ret);
-}
-
-TEST(path, ParsePathFileInRootDir)
-{
-    char *path = "////file";
-    filename_t parsed[2];
-    int ret;
-
-    ret = RomfsParsePath(path, parsed, 2);
-    TEST_ASSERT_EQUAL_INT(2, ret);
-
-    TEST_ASSERT_EQUAL_STRING(".", parsed[0]);
-    TEST_ASSERT_EQUAL_STRING("file", parsed[1]);
-}
-
-TEST(path, ParsePathFileInDirRelative)
-{
-    char *path = "a/////b//c";
-    filename_t parsed[3];
-    int ret;
-
-    ret = RomfsParsePath(path, parsed, 3);
-    TEST_ASSERT_EQUAL_INT(3, ret);
-
-    TEST_ASSERT_EQUAL_STRING("a", parsed[0]);
-    TEST_ASSERT_EQUAL_STRING("b", parsed[1]);
-    TEST_ASSERT_EQUAL_STRING("c", parsed[2]);
-}
-
-TEST(path, ParsePathCountTheElementsInPath)
-{
-    char *path = "1/////22//333/4444";
-    int ret;
-
-    ret = RomfsParsePath(path, NULL, 0);
-    TEST_ASSERT_EQUAL_INT(4, ret);
-}
-
-TEST(path, FindEntryFileNotFound)
+TEST(find, FindEntryFileNotFound)
 {
     nodehdr_t node;
     int ret;
@@ -294,7 +216,7 @@ TEST(path, FindEntryFileNotFound)
     TEST_ASSERT_EQUAL_INT(-ENOENT, ret);
 }
 
-TEST(path, FindEntryRootDir)
+TEST(find, FindEntryRootDir)
 {
     nodehdr_t node;
     int ret;
@@ -325,7 +247,7 @@ TEST(path, FindEntryRootDir)
     TEST_ASSERT_EQUAL_HEX(ROOT_OFFSET, node.off);
 }
 
-TEST(path, FindEntryFileFound)
+TEST(find, FindEntryFileFound)
 {
     nodehdr_t node;
     int ret;
@@ -336,7 +258,7 @@ TEST(path, FindEntryFileFound)
     TEST_ASSERT_EQUAL_HEX(A_FILE_OFFSET, node.off);
 }
 
-TEST(path, FindEntryFileInDirFound)
+TEST(find, FindEntryFileInDirFound)
 {
     nodehdr_t node;
     int ret;
@@ -347,7 +269,7 @@ TEST(path, FindEntryFileInDirFound)
     TEST_ASSERT_EQUAL_HEX(B_FILE_OFFSET, node.off);
 }
 
-TEST(path, FindEntryDirAbsolutePath)
+TEST(find, FindEntryDirAbsolutePath)
 {
     nodehdr_t node;
     int ret;
@@ -358,7 +280,7 @@ TEST(path, FindEntryDirAbsolutePath)
     TEST_ASSERT_EQUAL_HEX(DIR_OFFSET, node.off);
 }
 
-TEST(path, FindEntryDirRelativePath)
+TEST(find, FindEntryDirRelativePath)
 {
     nodehdr_t node;
     int ret;
@@ -384,23 +306,12 @@ TEST(path, FindEntryDirRelativePath)
     TEST_ASSERT_EQUAL_HEX(A_FILE_OFFSET, node.off);
 }
 
-TEST_GROUP_RUNNER(path)
+TEST_GROUP_RUNNER(find)
 {
-    RUN_TEST_CASE(path, SearchDirNotFound);
-    RUN_TEST_CASE(path, SearchDirFoundFile);
-    RUN_TEST_CASE(path, SearchDirFoundFileInDir);
-    RUN_TEST_CASE(path, ParsePathEmpty);
-    RUN_TEST_CASE(path, ParsePathRoot);
-    RUN_TEST_CASE(path, ParsePathPathTooLong);
-    RUN_TEST_CASE(path, ParsePathNameTooLong);
-    RUN_TEST_CASE(path, ParsePathArrayLenHasToBeBiggerThan0);
-    RUN_TEST_CASE(path, ParsePathFileInRootDir);
-    RUN_TEST_CASE(path, ParsePathFileInDirRelative);
-    RUN_TEST_CASE(path, ParsePathCountTheElementsInPath);
-    RUN_TEST_CASE(path, FindEntryFileNotFound);
-    RUN_TEST_CASE(path, FindEntryRootDir);
-    RUN_TEST_CASE(path, FindEntryFileFound);
-    RUN_TEST_CASE(path, FindEntryFileInDirFound);
-    RUN_TEST_CASE(path, FindEntryDirAbsolutePath);
-    RUN_TEST_CASE(path, FindEntryDirRelativePath);
+    RUN_TEST_CASE(find, FindEntryFileNotFound);
+    RUN_TEST_CASE(find, FindEntryRootDir);
+    RUN_TEST_CASE(find, FindEntryFileFound);
+    RUN_TEST_CASE(find, FindEntryFileInDirFound);
+    RUN_TEST_CASE(find, FindEntryDirAbsolutePath);
+    RUN_TEST_CASE(find, FindEntryDirRelativePath);
 }

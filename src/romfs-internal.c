@@ -3,6 +3,7 @@
 #include <errno.h>
 
 #include <romfs.h>
+#include <path_utils.h>
 #include "romfs-internal.h"
 
 /** private functions **/
@@ -101,63 +102,14 @@ int RomfsSearchDir(const romfs_t *rm, const char *name, uint32_t *offset)
     return -ENOENT;
 }
 
-int RomfsParsePath(const char *path, filename_t entryList[], size_t entryListLen)
-{
-    int ret = 0;
-    path_t pathCopy;
-    char *p;
 
-    if (entryList == NULL) {
-        // we're just counting depth, use some arbitraty big number
-        entryListLen = 999;
-    }
-
-    if (entryListLen == 0 && entryList != NULL) {
-        return -EINVAL;
-    }
-
-    if (strnlen(path, ROMFS_MAX_PATH_LEN) == ROMFS_MAX_PATH_LEN) {
-        return -ENAMETOOLONG;
-    }
-
-    strcpy(pathCopy, path);
-    p = pathCopy;
-    if (entryList != NULL) {
-        entryList[0][0] = '\0';
-    }
-
-    // remove initial / and set first element to indicate current dir
-    if (*p == '/') {
-        if (entryList != NULL) {
-            strcpy(entryList[0], ".");
-        }
-        ret = 1;
-    }
-
-    p = strtok(p, "/");
-    while (ret < entryListLen) {
-        if (p != NULL) {
-            if (strnlen(p, ROMFS_MAX_NAME_LEN) == ROMFS_MAX_NAME_LEN) {
-                ret = -ENAMETOOLONG;
-                break;
-            }
-            if (entryList != NULL) {
-                strcpy(entryList[ret], p);
-            }
-            ret++;
-        } else break;
-        p = strtok(NULL, "/");
-    }
-
-    return ret;
-}
 
 int RomfsFindEntry(const romfs_t *rm, uint32_t offset, const char* path, nodehdr_t *nd)
 {
     int d, ret;
     filename_t pathList[10]; // what should be max depth? Maybe need to reengineer this...
 
-    d = RomfsParsePath(path, pathList, 10);
+    d = UtilsParsePath(path, pathList, 10);
     if (d < 0) return d;
 
     ret = RomfsGetNodeHdr(rm, offset, nd);

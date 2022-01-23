@@ -3,8 +3,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define ROMFS_MAX_NAME_LEN     16
-#define ROMFS_MAX_PATH_LEN     256
+
 
 #define ROMFS_TYPE_HARDLINK    0    ///> FILEHDR_INFO: Link destination file header
 #define ROMFS_TYPE_DIRECTORY   1    ///> FILEHDR_INFO: First file's header

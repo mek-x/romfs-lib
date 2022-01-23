@@ -62,11 +62,7 @@ typedef struct {
     uint8_t mode;
 } nodehdr_t;
 
-typedef char filename_t[ROMFS_MAX_NAME_LEN];
-typedef char path_t[ROMFS_MAX_PATH_LEN];
-
 int RomfsVolumeConfigure(const uint8_t *buf, volume_t *vol);
 int RomfsGetNodeHdr(const romfs_t *rm, uint32_t offset, nodehdr_t *nd);
 int RomfsSearchDir(const romfs_t *rm, const char *name, uint32_t *offset);
-int RomfsParsePath(const char *path, filename_t entryList[], size_t entryListLen);
 int RomfsFindEntry(const romfs_t *rm, uint32_t startOffset, const char* path, nodehdr_t *nd);
