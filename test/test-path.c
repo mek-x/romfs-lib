@@ -125,6 +125,72 @@ TEST(path, ParsePathCountTheElementsInPath)
     TEST_ASSERT_EQUAL_INT(4, ret);
 }
 
+TEST(path, ParsePathGetNextEmpty) {
+    path_t buf;
+    char *save;
+    char *out;
+
+    out = UtilsParsePathGetNext("", buf, &save);
+    TEST_ASSERT_EQUAL_PTR(NULL, out);
+}
+
+TEST(path, ParsePathGetNextRoot) {
+    path_t buf;
+    char *save;
+    char *out;
+
+    out = UtilsParsePathGetNext("/", buf, &save);
+    TEST_ASSERT_EQUAL_STRING(".", out);
+}
+
+TEST(path, ParsePathGetNextAbsoluteOneFile) {
+    path_t buf;
+    char *save;
+    char *out;
+
+    out = UtilsParsePathGetNext("/file", buf, &save);
+    TEST_ASSERT_EQUAL_STRING(".", out);
+
+    out = UtilsParsePathGetNext(NULL, buf, &save);
+    TEST_ASSERT_EQUAL_STRING("file", out);
+
+    out = UtilsParsePathGetNext(NULL, buf, &save);
+    TEST_ASSERT_EQUAL_PTR(NULL, out);
+}
+
+TEST(path, ParsePathGetNextRelativeTwoFiles) {
+    path_t buf;
+    char *save;
+    char *out;
+
+    out = UtilsParsePathGetNext("file1/file2", buf, &save);
+    TEST_ASSERT_EQUAL_STRING("file1", out);
+
+    out = UtilsParsePathGetNext(NULL, buf, &save);
+    TEST_ASSERT_EQUAL_STRING("file2", out);
+
+    out = UtilsParsePathGetNext(NULL, buf, &save);
+    TEST_ASSERT_EQUAL_PTR(NULL, out);
+}
+
+TEST(path, ParsePathGetNextAbsoluteManySlashes) {
+    path_t buf;
+    char *save;
+    char *out;
+
+    out = UtilsParsePathGetNext("//////file1////file2///////", buf, &save);
+    TEST_ASSERT_EQUAL_STRING(".", out);
+
+    out = UtilsParsePathGetNext(NULL, buf, &save);
+    TEST_ASSERT_EQUAL_STRING("file1", out);
+
+    out = UtilsParsePathGetNext(NULL, buf, &save);
+    TEST_ASSERT_EQUAL_STRING("file2", out);
+
+    out = UtilsParsePathGetNext(NULL, buf, &save);
+    TEST_ASSERT_EQUAL_PTR(NULL, out);
+}
+
 TEST_GROUP_RUNNER(path)
 {
     RUN_TEST_CASE(path, ParsePathEmpty);
@@ -135,4 +201,9 @@ TEST_GROUP_RUNNER(path)
     RUN_TEST_CASE(path, ParsePathFileInRootDir);
     RUN_TEST_CASE(path, ParsePathFileInDirRelative);
     RUN_TEST_CASE(path, ParsePathCountTheElementsInPath);
+    RUN_TEST_CASE(path, ParsePathGetNextEmpty);
+    RUN_TEST_CASE(path, ParsePathGetNextRoot);
+    RUN_TEST_CASE(path, ParsePathGetNextAbsoluteOneFile);
+    RUN_TEST_CASE(path, ParsePathGetNextRelativeTwoFiles);
+    RUN_TEST_CASE(path, ParsePathGetNextAbsoluteManySlashes);
 }
