@@ -1,8 +1,11 @@
 cmake_minimum_required(VERSION 3.9)
-project(romfs-tool)
+project(romfs-tool
+    VERSION 0.0.1
+    LANGUAGES C
+    )
 
 set(TARGET ${CMAKE_PROJECT_NAME})
-set(VERSION "0.0.1")
+set(VERSION ${CMAKE_PROJECT_VERSION})
 
 message("Building ${TARGET} v${VERSION}")
 
