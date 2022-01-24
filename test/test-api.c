@@ -495,46 +495,53 @@ TEST_TEAR_DOWN(readDir)
 TEST(readDir, ReadDirInvalidParams)
 {
     int ret;
+    uint32_t cookie = 32;
 
-    ret = RomfsReadDir(ROOT_FD, NULL, 10, 32, &dirBufUsed);
+    ret = RomfsReadDir(ROOT_FD, NULL, 10, &cookie, &dirBufUsed);
     TEST_ASSERT_EQUAL_INT(-EINVAL, ret);
 
-    ret = RomfsReadDir(ROOT_FD, dirBuf, 10, 32, NULL);
+    ret = RomfsReadDir(ROOT_FD, dirBuf, 10, &cookie, NULL);
     TEST_ASSERT_EQUAL_INT(-EINVAL, ret);
 
-    ret = RomfsReadDir(ROOT_FD, NULL, 10, 32, NULL);
+    ret = RomfsReadDir(ROOT_FD, NULL, 10, &cookie, NULL);
+    TEST_ASSERT_EQUAL_INT(-EINVAL, ret);
+
+    ret = RomfsReadDir(ROOT_FD, dirBuf, 10, NULL, &dirBufUsed);
     TEST_ASSERT_EQUAL_INT(-EINVAL, ret);
 }
 
 TEST(readDir, ReadDirBadFileDescriptor)
 {
     int ret;
+    uint32_t cookie = 32;
 
-    ret = RomfsReadDir(0, dirBuf, 10, 32, &dirBufUsed);
+    ret = RomfsReadDir(0, dirBuf, 10, &cookie, &dirBufUsed);
     TEST_ASSERT_EQUAL_INT(-EBADF, ret);
 
-    ret = RomfsReadDir(9999, dirBuf, 10, 32, &dirBufUsed);
+    ret = RomfsReadDir(9999, dirBuf, 10, &cookie, &dirBufUsed);
     TEST_ASSERT_EQUAL_INT(-EBADF, ret);
 
-    ret = RomfsReadDir(8, dirBuf, 10, 32, &dirBufUsed);
+    ret = RomfsReadDir(8, dirBuf, 10, &cookie, &dirBufUsed);
     TEST_ASSERT_EQUAL_INT(-EBADF, ret);
 }
 
 TEST(readDir, ReadDirNotDirectory)
 {
     int ret;
+    uint32_t cookie = 32;
 
     ret = RomfsOpenAt(ROOT_FD, "a", 0);
 
-    ret = RomfsReadDir(ret, dirBuf, 10, 32, &dirBufUsed);
+    ret = RomfsReadDir(ret, dirBuf, 10, &cookie, &dirBufUsed);
     TEST_ASSERT_EQUAL_INT(-ENOTDIR, ret);
 }
 
 TEST(readDir, ReadDirRootDir)
 {
     int ret;
+    uint32_t cookie = 0;
 
-    ret = RomfsReadDir(ROOT_FD, dirBuf, 10, 0, &dirBufUsed);
+    ret = RomfsReadDir(ROOT_FD, dirBuf, 10, &cookie, &dirBufUsed);
     TEST_ASSERT_EQUAL_INT(0, ret);
 
     TEST_ASSERT_EQUAL_INT(4, dirBufUsed);
@@ -567,10 +574,11 @@ TEST(readDir, ReadDirRootDir)
 TEST(readDir, ReadDirInDir)
 {
     int ret;
+    uint32_t cookie = 0;
 
     ret = RomfsOpenAt(ROOT_FD, "dir", 0);
 
-    ret = RomfsReadDir(ret, dirBuf, 10, 0, &dirBufUsed);
+    ret = RomfsReadDir(ret, dirBuf, 10, &cookie, &dirBufUsed);
     TEST_ASSERT_EQUAL_INT(0, ret);
 
     TEST_ASSERT_EQUAL_INT(3, dirBufUsed);
@@ -597,19 +605,22 @@ TEST(readDir, ReadDirInDir)
 TEST(readDir, ReadDirUsingCookie)
 {
     int ret;
+    uint32_t cookie = 0;
 
-    ret = RomfsReadDir(ROOT_FD, dirBuf, 2, 0, &dirBufUsed);
+    ret = RomfsReadDir(ROOT_FD, dirBuf, 2, &cookie, &dirBufUsed);
     TEST_ASSERT_EQUAL_INT(0, ret);
 
     TEST_ASSERT_EQUAL_INT(2, dirBufUsed);
+    TEST_ASSERT_EQUAL_HEX(DIR_OFFSET, cookie);
 
     TEST_ASSERT_EQUAL_STRING_LEN(".", dirBuf[0].name, 1);
     TEST_ASSERT_EQUAL_STRING_LEN("..", dirBuf[1].name, 2);
 
-    ret = RomfsReadDir(ROOT_FD, dirBuf, 3, dirBuf[1].next, &dirBufUsed);
+    ret = RomfsReadDir(ROOT_FD, dirBuf, 2, &cookie, &dirBufUsed);
     TEST_ASSERT_EQUAL_INT(0, ret);
 
     TEST_ASSERT_EQUAL_INT(2, dirBufUsed);
+    TEST_ASSERT_EQUAL_HEX(ROMFS_COOKIE_LAST, cookie);
 
     TEST_ASSERT_EQUAL_STRING_LEN("dir", dirBuf[0].name, 3);
     TEST_ASSERT_EQUAL_STRING_LEN("a", dirBuf[1].name, 1);

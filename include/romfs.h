@@ -28,6 +28,9 @@
 
 #define ROMFS_O_FLAGS_NONBLOCK  (1 << 0)
 
+#define ROMFS_COOKIE_START      0
+#define ROMFS_COOKIE_LAST       0xFFFFFFFF
+
 typedef struct {
     uint32_t ino;
     uint32_t size;
@@ -51,10 +54,11 @@ typedef struct {
 
 int RomfsLoad(uint8_t * img, size_t imgSize);
 int RomfsOpenAt(int fd, const char *path, int flags);
+int RomfsOpenRoot(const char *path, int flags);
 int RomfsClose(int fd);
 int RomfsFdStat(int fd, romfs_stat_t *stat);
 int RomfsFdStatAt(int fd, const char *path, romfs_stat_t *stat);
 int RomfsRead(int fd, void *buf, size_t nbyte);
 int RomfsSeek(int fd, long off, romfs_seek_t whence);
-int RomfsReadDir(int fd, romfs_dirent_t *buf, size_t bufLen, uint32_t cookie, size_t *bufUsed);
+int RomfsReadDir(int fd, romfs_dirent_t *buf, size_t bufLen, uint32_t *cookie, size_t *bufUsed);
 int RomfsMapFile(void **addr, size_t *len, int fd, uint32_t off);

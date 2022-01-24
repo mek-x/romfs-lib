@@ -60,8 +60,6 @@ int RomfsLoad(uint8_t * img, size_t imgSize)
     return ret;
 }
 
-
-
 int RomfsOpenAt(int fd, const char *path, int flags)
 {
     int ret, f;
@@ -82,6 +80,10 @@ int RomfsOpenAt(int fd, const char *path, int flags)
     fildes[f].cur = (void *)(romfs.img + fildes[f].node.dataOff);
 
     return f + RESVD_FDS; // map file descriptor to number higher than reserved fds
+}
+
+int RomfsOpenRoot(const char *path, int flags) {
+    return RomfsOpenAt(RESVD_FDS, path, flags);
 }
 
 int RomfsClose(int fd)
@@ -226,14 +228,14 @@ int RomfsSeek(int fd, long off, romfs_seek_t whence)
     - follow hardlinks
     - cookie can be bad
 */
-int RomfsReadDir(int fd, romfs_dirent_t *buf, size_t bufLen, uint32_t cookie, size_t *bufUsed)
+int RomfsReadDir(int fd, romfs_dirent_t *buf, size_t bufLen, uint32_t *cookie, size_t *bufUsed)
 {
     nodehdr_t curNode;
     int ret;
 
     fd = fd - RESVD_FDS;
 
-    if (buf == NULL || bufUsed == NULL) {
+    if (buf == NULL || bufUsed == NULL || cookie == NULL) {
         return -EINVAL;
     }
 
@@ -245,11 +247,16 @@ int RomfsReadDir(int fd, romfs_dirent_t *buf, size_t bufLen, uint32_t cookie, si
         return -ENOTDIR;
     }
 
-    if (cookie == 0) {
-        cookie = fildes[fd].node.info;
+    if (*cookie == ROMFS_COOKIE_LAST) {
+        *bufUsed = 0;
+        return 0;
     }
 
-    ret = RomfsGetNodeHdr(&romfs, cookie, &curNode);
+    if (*cookie == 0) {
+        *cookie = fildes[fd].node.info;
+    }
+
+    ret = RomfsGetNodeHdr(&romfs, *cookie, &curNode);
     if (ret < 0) {
         return -EINVAL;
     }
@@ -259,14 +266,24 @@ int RomfsReadDir(int fd, romfs_dirent_t *buf, size_t bufLen, uint32_t cookie, si
         buf[*bufUsed].nameLen = strlen(curNode.name);
         buf[*bufUsed].inode   = curNode.off;
         buf[*bufUsed].next    = curNode.next;
-        buf[*bufUsed].type    = curNode.mode & ROMFS_TYPE_MASK;
+        buf[*bufUsed].type    = curNode.mode;
 
-        ret = RomfsGetNodeHdr(&romfs, curNode.next, &curNode);
-        if (ret < 0) {
+        if (curNode.next) {
+            *cookie = curNode.next;
+
+            ret = RomfsGetNodeHdr(&romfs, curNode.next, &curNode);
+            if (ret < 0) {
+                break;
+            }
+        }
+        else {
+            *cookie = ROMFS_COOKIE_LAST;
             (*bufUsed)++;
             break;
         }
     }
+
+    ROMFS_TRACE("last cookie = 0x%x", *cookie);
 
     return 0;
 }
