@@ -14,6 +14,7 @@ target_include_directories(romfs PUBLIC ../include)
 target_compile_definitions(romfs PUBLIC
     MAX_PATH_LEN=${ROMFS_MAX_PATH_LEN}
     MAX_NAME_LEN=${ROMFS_MAX_FILE_NAME_LEN}
+    PROJECT_VERSION="${CMAKE_PROJECT_VERSION}"
     )
 
 if (ROMFS_DEBUG_TRACES)

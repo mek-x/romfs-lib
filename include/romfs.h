@@ -3,7 +3,11 @@
 #include <stddef.h>
 #include <stdint.h>
 
-
+#ifndef PROJECT_VERSION
+#   define ROMFS_VERSION "unknown"
+#else
+#   define ROMFS_VERSION  PROJECT_VERSION
+#endif
 
 #define ROMFS_TYPE_HARDLINK    0    ///> FILEHDR_INFO: Link destination file header
 #define ROMFS_TYPE_DIRECTORY   1    ///> FILEHDR_INFO: First file's header

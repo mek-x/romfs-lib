@@ -36,6 +36,7 @@ int FindFirstClosedFd()
 
 int RomfsLoad(uint8_t * img, size_t imgSize)
 {
+    ROMFS_TRACE("Romfs lib, v.%s", ROMFS_VERSION);
     int ret = 0;
 
     romfs.img = img;
