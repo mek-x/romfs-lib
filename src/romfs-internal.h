@@ -45,11 +45,11 @@ typedef struct {
     uint32_t rootOff;
 } volume_t;
 
-typedef struct {
+struct romfs_t {
     uint8_t *img;
     size_t size;
     volume_t vol;
-} romfs_t;
+};
 
 typedef struct {
     uint32_t off;
@@ -63,6 +63,6 @@ typedef struct {
 } nodehdr_t;
 
 int RomfsVolumeConfigure(const uint8_t *buf, volume_t *vol);
-int RomfsGetNodeHdr(const romfs_t *rm, uint32_t offset, nodehdr_t *nd);
-int RomfsSearchDir(const romfs_t *rm, const char *name, uint32_t *offset);
-int RomfsFindEntry(const romfs_t *rm, uint32_t startOffset, const char* path, nodehdr_t *nd);
+int RomfsGetNodeHdr(const struct romfs_t *rm, uint32_t offset, nodehdr_t *nd);
+int RomfsSearchDir(const struct romfs_t *rm, const char *name, uint32_t *offset);
+int RomfsFindEntry(const struct romfs_t *rm, uint32_t startOffset, const char* path, nodehdr_t *nd);

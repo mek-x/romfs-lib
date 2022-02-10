@@ -21,7 +21,7 @@ uint32_t ReadBE32(const uint8_t *buf, size_t offset)
 #define LINK_NOT_FOLLOWED 0
 
 static
-int FollowHardlinks(const romfs_t *rm, uint32_t offset, uint32_t *destOffset)
+int FollowHardlinks(const struct romfs_t *rm, uint32_t offset, uint32_t *destOffset)
 {
     uint32_t next;
     nodehdr_t node;
@@ -59,7 +59,7 @@ int RomfsVolumeConfigure(const uint8_t *buf, volume_t *vol)
     return 0;
 }
 
-int RomfsGetNodeHdr(const romfs_t *rm, uint32_t offset, nodehdr_t *nd)
+int RomfsGetNodeHdr(const struct romfs_t *rm, uint32_t offset, nodehdr_t *nd)
 {
     uint8_t *buf = rm->img;
 
@@ -81,7 +81,7 @@ int RomfsGetNodeHdr(const romfs_t *rm, uint32_t offset, nodehdr_t *nd)
     return 0;
 }
 
-int RomfsSearchDir(const romfs_t *rm, const char *name, uint32_t *offset)
+int RomfsSearchDir(const struct romfs_t *rm, const char *name, uint32_t *offset)
 {
     int ret;
     nodehdr_t node;
@@ -102,7 +102,7 @@ int RomfsSearchDir(const romfs_t *rm, const char *name, uint32_t *offset)
     return -ENOENT;
 }
 
-int RomfsFindEntry(const romfs_t *rm, uint32_t offset, const char* path, nodehdr_t *nd)
+int RomfsFindEntry(const struct romfs_t *rm, uint32_t offset, const char* path, nodehdr_t *nd)
 {
     int d, ret;
     path_t buf;

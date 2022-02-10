@@ -3,6 +3,16 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#ifndef RomfsMalloc
+#   include <stdlib.h>
+#   define RomfsMalloc(size) malloc(size)
+#endif
+
+#ifndef RomfsFree
+#   include <stdlib.h>
+#   define RomfsFree(ptr) free(ptr)
+#endif
+
 #ifndef PROJECT_VERSION
 #   define ROMFS_VERSION "unknown"
 #else
@@ -52,14 +62,17 @@ typedef struct {
     const char  *name;
 } romfs_dirent_t;
 
-int RomfsLoad(uint8_t * img, size_t imgSize);
-int RomfsOpenAt(int fd, const char *path, int flags);
-int RomfsOpenRoot(const char *path, int flags);
-int RomfsClose(int fd);
-int RomfsFdStat(int fd, romfs_stat_t *stat);
-int RomfsFdStatAt(int fd, const char *path, romfs_stat_t *stat);
-int RomfsRead(int fd, void *buf, size_t nbyte);
-int RomfsSeek(int fd, long off, romfs_seek_t whence);
-int RomfsTell(int fd, long *off);
-int RomfsReadDir(int fd, romfs_dirent_t *buf, size_t bufLen, uint32_t *cookie, size_t *bufUsed);
-int RomfsMapFile(void **addr, size_t *len, int fd, uint32_t off);
+typedef struct romfs_t *romfs_t;
+
+int RomfsLoad(uint8_t * img, size_t imgSize, romfs_t *romfs);
+void RomfsUnload(romfs_t *romfs);
+int RomfsOpenAt(romfs_t t, int fd, const char *path, int flags);
+int RomfsOpenRoot(romfs_t t, const char *path, int flags);
+int RomfsClose(romfs_t t, int fd);
+int RomfsFdStat(romfs_t t, int fd, romfs_stat_t *stat);
+int RomfsFdStatAt(romfs_t t, int fd, const char *path, romfs_stat_t *stat);
+int RomfsRead(romfs_t t, int fd, void *buf, size_t nbyte);
+int RomfsSeek(romfs_t t, int fd, long off, romfs_seek_t whence);
+int RomfsTell(romfs_t t, int fd, long *off);
+int RomfsReadDir(romfs_t t, int fd, romfs_dirent_t *buf, size_t bufLen, uint32_t *cookie, size_t *bufUsed);
+int RomfsMapFile(romfs_t t, void **addr, size_t *len, int fd, uint32_t off);

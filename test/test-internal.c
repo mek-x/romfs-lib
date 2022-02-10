@@ -2,8 +2,8 @@
 
 /* GLOBALS */
 
-romfs_t rm_basic;
-romfs_t rm_empty;
+struct romfs_t rm_basic;
+struct romfs_t rm_empty;
 
 /***************************************/
 TEST_GROUP(volume);

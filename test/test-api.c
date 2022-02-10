@@ -1,6 +1,7 @@
 #include "common_test_defines.h"
 
 /* GLOBALS */
+romfs_t r;
 int openedFd;
 romfs_dirent_t dirBuf[10];
 size_t dirBufUsed;
@@ -19,16 +20,21 @@ TEST_TEAR_DOWN(load)
 
 TEST(load, LoadEmptyRomfsImage)
 {
-    int ret = RomfsLoad(empty_romfs, empty_romfs_len);
+    int ret = RomfsLoad(empty_romfs, empty_romfs_len, &r);
     TEST_ASSERT_EQUAL_INT(0, ret);
+    TEST_ASSERT_NOT_NULL(r);
+
+    RomfsUnload(&r);
+    TEST_ASSERT_NULL(r);
 }
 
 TEST(load, LoadBadImage)
 {
     uint8_t badImage[] = { 0x00, 0x00, 0x00, 0x00 };
 
-    int ret = RomfsLoad(badImage, sizeof(badImage));
+    int ret = RomfsLoad(badImage, sizeof(badImage), &r);
     TEST_ASSERT_EQUAL_INT(-EINVAL, ret);
+    TEST_ASSERT_NULL(r);
 }
 
 TEST_GROUP_RUNNER(load)
@@ -43,114 +49,115 @@ TEST_GROUP(open);
 
 TEST_SETUP(open)
 {
-    RomfsLoad(basic_romfs, basic_romfs_len);
+    RomfsLoad(basic_romfs, basic_romfs_len, &r);
 }
 
 TEST_TEAR_DOWN(open)
 {
+    RomfsUnload(&r);
 }
 
 #define ROOT_FD 3
 
 TEST(open, OpenAtErrorAccessingFileFromBadFD)
 {
-    int ret = RomfsOpenAt(0, "a", 0);
+    int ret = RomfsOpenAt(r, 0, "a", 0);
     TEST_ASSERT_EQUAL_INT(-EBADF, ret);
 }
 
 TEST(open, OpenAtBadFile)
 {
-    int ret = RomfsOpenAt(ROOT_FD, "Not_a_file", 0);
+    int ret = RomfsOpenAt(r, ROOT_FD, "Not_a_file", 0);
     TEST_ASSERT_EQUAL_INT(-ENOENT, ret);
 }
 
 TEST(open, OpenAtOpenFileAtRoot)
 {
-    int ret = RomfsOpenAt(ROOT_FD, "a", 0);
+    int ret = RomfsOpenAt(r, ROOT_FD, "a", 0);
     TEST_ASSERT_EQUAL_INT(4, ret);
 }
 
 TEST(open, OpenAtOpenFileAtRootAndCheckWhetherItsFile)
 {
-    int ret = RomfsOpenAt(ROOT_FD, "a", 0);
+    int ret = RomfsOpenAt(r, ROOT_FD, "a", 0);
     TEST_ASSERT_EQUAL_INT(4, ret);
 
-    int mode = RomfsFdStat(ret, NULL);
+    int mode = RomfsFdStat(r, ret, NULL);
     TEST_ASSERT_MESSAGE(IS_FILE(mode), "Opened file should be a regular file");
 }
 
 TEST(open, OpenAtOpenDirAtRootAndCheckWhetherItsDir)
 {
-    int ret = RomfsOpenAt(ROOT_FD, "/dir", 0);
+    int ret = RomfsOpenAt(r, ROOT_FD, "/dir", 0);
     TEST_ASSERT_EQUAL_INT(4, ret);
 
-    int mode = RomfsFdStat(ret, NULL);
+    int mode = RomfsFdStat(r, ret, NULL);
     TEST_ASSERT_MESSAGE(IS_DIRECTORY(mode), "Opened file should be a directory");
 }
 
 TEST(open, OpenAtOpenFileInDir)
 {
-    int ret = RomfsOpenAt(ROOT_FD, "dir/b", 0);
+    int ret = RomfsOpenAt(r, ROOT_FD, "dir/b", 0);
     TEST_ASSERT_EQUAL_INT(4, ret);
 
-    int mode = RomfsFdStat(ret, NULL);
+    int mode = RomfsFdStat(r, ret, NULL);
     TEST_ASSERT_MESSAGE(IS_FILE(mode), "Opened file should be a regular file");
 }
 
 TEST(open, OpenAtTwoFiles)
 {
-    int ret = RomfsOpenAt(ROOT_FD, "/a", 0);
+    int ret = RomfsOpenAt(r, ROOT_FD, "/a", 0);
     TEST_ASSERT_EQUAL_INT(4, ret);
 
-    ret = RomfsOpenAt(ROOT_FD, "/dir/b", 0);
+    ret = RomfsOpenAt(r, ROOT_FD, "/dir/b", 0);
     TEST_ASSERT_EQUAL_INT(5, ret);
 }
 
 TEST(open, OpenAtDirAndFile)
 {
-    int ret = RomfsOpenAt(ROOT_FD, "dir", 0);
+    int ret = RomfsOpenAt(r, ROOT_FD, "dir", 0);
     TEST_ASSERT_EQUAL_INT(4, ret);
 
-    ret = RomfsOpenAt(ROOT_FD, "a", 0);
+    ret = RomfsOpenAt(r, ROOT_FD, "a", 0);
     TEST_ASSERT_EQUAL_INT(5, ret);
 
-    int mode = RomfsFdStat(4, NULL);
+    int mode = RomfsFdStat(r, 4, NULL);
     TEST_ASSERT_MESSAGE(IS_DIRECTORY(mode), "Opened file should be a directory");
 
-    mode = RomfsFdStat(5, NULL);
+    mode = RomfsFdStat(r, 5, NULL);
     TEST_ASSERT_MESSAGE(IS_FILE(mode), "Opened file should be a regular file");
 }
 
 TEST(open, OpenAtPathWithHardlinks)
 {
-    int ret = RomfsOpenAt(ROOT_FD, "/dir/../a", 0);
+    int ret = RomfsOpenAt(r, ROOT_FD, "/dir/../a", 0);
     TEST_ASSERT_EQUAL_INT(4, ret);
 
-    int mode = RomfsFdStat(4, NULL);
+    int mode = RomfsFdStat(r, 4, NULL);
     TEST_ASSERT_MESSAGE(IS_FILE(mode), "Opened file should be a regular file");
 
-    ret = RomfsOpenAt(ROOT_FD, "../../dir/.././a", 0);
+    ret = RomfsOpenAt(r, ROOT_FD, "../../dir/.././a", 0);
     TEST_ASSERT_EQUAL_INT(5, ret);
 
-    mode = RomfsFdStat(5, NULL);
+    mode = RomfsFdStat(r, 5, NULL);
     TEST_ASSERT_MESSAGE(IS_FILE(mode), "Opened file should be a regular file");
 
-    ret = RomfsOpenAt(ROOT_FD, "./dir", 0);
+    ret = RomfsOpenAt(r, ROOT_FD, "./dir", 0);
     TEST_ASSERT_EQUAL_INT(6, ret);
 
-    mode = RomfsFdStat(6, NULL);
+    mode = RomfsFdStat(r, 6, NULL);
     TEST_ASSERT_MESSAGE(IS_DIRECTORY(mode), "Opened file should be a directory");
 }
 
 TEST(open, OpenAtRelativePath)
 {
-    int ret = RomfsOpenAt(ROOT_FD, "dir", 0);
+    int ret = RomfsOpenAt(r, ROOT_FD, "dir", 0);
     TEST_ASSERT_EQUAL_INT(4, ret);
 
-    ret = RomfsOpenAt(ret, "b", 0);
+    ret = RomfsOpenAt(r, ret, "b", 0);
     TEST_ASSERT_EQUAL_INT(5, ret);
 
-    int mode = RomfsFdStat(ret, NULL);
+    int mode = RomfsFdStat(r, ret, NULL);
     TEST_ASSERT_MESSAGE(IS_FILE(mode), "Opened file should be a regular file");
 }
 
@@ -174,17 +181,18 @@ TEST_GROUP(close);
 
 TEST_SETUP(close)
 {
-    RomfsLoad(basic_romfs, basic_romfs_len);
-    openedFd = RomfsOpenAt(ROOT_FD, "a", 0);
+    RomfsLoad(basic_romfs, basic_romfs_len, &r);
+    openedFd = RomfsOpenAt(r, ROOT_FD, "a", 0);
 }
 
 TEST_TEAR_DOWN(close)
 {
+    RomfsUnload(&r);
 }
 
 TEST(close, CloseClosedFile)
 {
-    int ret = RomfsClose(openedFd+1);
+    int ret = RomfsClose(r, openedFd+1);
     TEST_ASSERT_EQUAL_INT(-EBADF, ret);
 }
 
@@ -192,13 +200,13 @@ TEST(close, CloseFile)
 {
     int ret;
 
-    ret = RomfsFdStat(openedFd, NULL);
+    ret = RomfsFdStat(r, openedFd, NULL);
     TEST_ASSERT(IS_FILE(ret));
 
-    ret = RomfsClose(openedFd);
+    ret = RomfsClose(r, openedFd);
     TEST_ASSERT_EQUAL_INT(0, ret);
 
-    ret = RomfsFdStat(openedFd, NULL);
+    ret = RomfsFdStat(r, openedFd, NULL);
     TEST_ASSERT_EQUAL_INT(-EBADF, ret);
 }
 
@@ -215,28 +223,29 @@ TEST_GROUP(stat);
 
 TEST_SETUP(stat)
 {
-    RomfsLoad(basic_romfs, basic_romfs_len);
+    RomfsLoad(basic_romfs, basic_romfs_len, &r);
 }
 
 TEST_TEAR_DOWN(stat)
 {
+    RomfsUnload(&r);
 }
 
 TEST(stat, StatCheckBadFd)
 {
-    int mode = RomfsFdStat(0, NULL);
+    int mode = RomfsFdStat(r, 0, NULL);
     TEST_ASSERT_EQUAL_INT_MESSAGE(-EBADF, mode, "expecting EBADF error");
 }
 
 TEST(stat, StatAtNoFile)
 {
-    int mode = RomfsFdStatAt(ROOT_FD, "x", NULL);
+    int mode = RomfsFdStatAt(r, ROOT_FD, "x", NULL);
     TEST_ASSERT_EQUAL_INT_MESSAGE(-ENOENT, mode, "expecting ENOENT error");
 }
 
 TEST(stat, StatCheckRootFd)
 {
-    int mode = RomfsFdStat(ROOT_FD, NULL);
+    int mode = RomfsFdStat(r, ROOT_FD, NULL);
 
     TEST_ASSERT_MESSAGE(IS_DIRECTORY(mode), "type is not directory");
 }
@@ -244,9 +253,9 @@ TEST(stat, StatCheckRootFd)
 TEST(stat, StatCheckMoreStats)
 {
     romfs_stat_t stat;
-    int fd = RomfsOpenAt(ROOT_FD, "a", 0);
+    int fd = RomfsOpenAt(r, ROOT_FD, "a", 0);
 
-    int mode = RomfsFdStat(fd, &stat);
+    int mode = RomfsFdStat(r, fd, &stat);
 
     TEST_ASSERT_MESSAGE(IS_FILE(mode), "type is not file");
     TEST_ASSERT_MESSAGE(IS_FILE(stat.mode), "type is not file");
@@ -258,7 +267,7 @@ TEST(stat, StatCheckMoreStats)
 TEST(stat, StatAtCheckMoreStats)
 {
     romfs_stat_t stat;
-    int mode = RomfsFdStatAt(ROOT_FD, "dir/b", &stat);
+    int mode = RomfsFdStatAt(r, ROOT_FD, "dir/b", &stat);
 
     TEST_ASSERT_MESSAGE(IS_FILE(mode), "type is not file");
     TEST_ASSERT_MESSAGE(IS_FILE(stat.mode), "type is not file");
@@ -282,47 +291,48 @@ TEST_GROUP(readFile);
 
 TEST_SETUP(readFile)
 {
-    RomfsLoad(basic_romfs, basic_romfs_len);
-    openedFd = RomfsOpenAt(ROOT_FD, "a", 0);
+    RomfsLoad(basic_romfs, basic_romfs_len, &r);
+    openedFd = RomfsOpenAt(r, ROOT_FD, "a", 0);
 }
 
 TEST_TEAR_DOWN(readFile)
 {
-    RomfsClose(openedFd);
+    RomfsClose(r, openedFd);
+    RomfsUnload(&r);
 }
 
 TEST(readFile, ReadBadFile)
 {
-    int r;
+    int ret;
     char buf[10];
 
-    r = RomfsRead(openedFd+1, buf, 10);
-    TEST_ASSERT_EQUAL_INT(-EBADF, r);
+    ret = RomfsRead(r, openedFd+1, buf, 10);
+    TEST_ASSERT_EQUAL_INT(-EBADF, ret);
 
-    r = RomfsRead(0, buf, 10);
-    TEST_ASSERT_EQUAL_INT(-EBADF, r);
+    ret = RomfsRead(r, 0, buf, 10);
+    TEST_ASSERT_EQUAL_INT(-EBADF, ret);
 }
 
 TEST(readFile, ReadBadParams)
 {
-    int r;
+    int ret;
 
-    r = RomfsRead(openedFd, NULL, 10);
-    TEST_ASSERT_EQUAL_INT(-EINVAL, r);
+    ret = RomfsRead(r, openedFd, NULL, 10);
+    TEST_ASSERT_EQUAL_INT(-EINVAL, ret);
 }
 
 TEST(readFile, ReadFile)
 {
     char buf[10];
 
-    int r;
-    r = RomfsRead(openedFd, buf, 2);
-    TEST_ASSERT_EQUAL_INT(2, r);
+    int ret;
+    ret = RomfsRead(r, openedFd, buf, 2);
+    TEST_ASSERT_EQUAL_INT(2, ret);
 
     TEST_ASSERT_EQUAL_STRING_LEN("aa", buf, 2);
 
-    r = RomfsRead(openedFd, buf, 2);
-    TEST_ASSERT_EQUAL_INT(2, r);
+    ret = RomfsRead(r, openedFd, buf, 2);
+    TEST_ASSERT_EQUAL_INT(2, ret);
 
     TEST_ASSERT_EQUAL_STRING_LEN("a\n", buf, 2);
 }
@@ -331,9 +341,9 @@ TEST(readFile, ReadFileBiggerThanFileSize)
 {
     char buf[10] = { 0 };
 
-    int r;
-    r = RomfsRead(openedFd, buf, 10);
-    TEST_ASSERT_EQUAL_INT(4, r);
+    int ret;
+    ret = RomfsRead(r, openedFd, buf, 10);
+    TEST_ASSERT_EQUAL_INT(4, ret);
 
     TEST_ASSERT_EQUAL_MEMORY("aaa\n\0\0\0\0\0\0", buf, 10);
 }
@@ -342,12 +352,12 @@ TEST(readFile, ReadFileOnceThenTryToOverflow)
 {
     char buf[10] = { 0 };
 
-    int r;
-    r = RomfsRead(openedFd, buf, 2);
-    TEST_ASSERT_EQUAL_INT(2, r);
+    int ret;
+    ret = RomfsRead(r, openedFd, buf, 2);
+    TEST_ASSERT_EQUAL_INT(2, ret);
 
-    r = RomfsRead(openedFd, buf, 10);
-    TEST_ASSERT_EQUAL_INT(2, r);
+    ret = RomfsRead(r, openedFd, buf, 10);
+    TEST_ASSERT_EQUAL_INT(2, ret);
 
     TEST_ASSERT_EQUAL_MEMORY("a\n\0", buf, 3);
 }
@@ -356,11 +366,11 @@ TEST(readFile, TryToReadFromDir)
 {
     char buf[10] = { 0 };
     int fd;
-    int r;
+    int ret;
 
-    fd = RomfsOpenAt(3, "..", 0);
-    r = RomfsRead(fd, buf, 10);
-    TEST_ASSERT_EQUAL_INT(-EISDIR, r);
+    fd = RomfsOpenAt(r, 3, "..", 0);
+    ret = RomfsRead(r, fd, buf, 10);
+    TEST_ASSERT_EQUAL_INT(-EISDIR, ret);
 
     TEST_ASSERT_EQUAL_MEMORY("\0\0", buf, 2);
 }
@@ -381,31 +391,32 @@ TEST_GROUP(seek);
 
 TEST_SETUP(seek)
 {
-    RomfsLoad(basic_romfs, basic_romfs_len);
-    openedFd = RomfsOpenAt(ROOT_FD, "a", 0);
+    RomfsLoad(basic_romfs, basic_romfs_len, &r);
+    openedFd = RomfsOpenAt(r, ROOT_FD, "a", 0);
 }
 
 TEST_TEAR_DOWN(seek)
 {
-    RomfsClose(openedFd);
+    RomfsClose(r, openedFd);
+    RomfsUnload(&r);
 }
 
 TEST(seek, SeekParamErrors) {
     int ret;
 
-    ret = RomfsSeek(openedFd, 0, 3);
+    ret = RomfsSeek(r, openedFd, 0, 3);
     TEST_ASSERT_EQUAL_INT(-EINVAL, ret);
 
-    ret = RomfsSeek(ROOT_FD, 0, ROMFS_SEEK_SET);
+    ret = RomfsSeek(r, ROOT_FD, 0, ROMFS_SEEK_SET);
     TEST_ASSERT_EQUAL_INT(-EBADF, ret);
 
-    ret = RomfsSeek(10, 0, ROMFS_SEEK_SET);
+    ret = RomfsSeek(r, 10, 0, ROMFS_SEEK_SET);
     TEST_ASSERT_EQUAL_INT(-EBADF, ret);
 
-    ret = RomfsSeek(openedFd, 10, 3);
+    ret = RomfsSeek(r, openedFd, 10, 3);
     TEST_ASSERT_EQUAL_INT(-EINVAL, ret);
 
-    ret = RomfsSeek(openedFd, -10, 3);
+    ret = RomfsSeek(r, openedFd, -10, 3);
     TEST_ASSERT_EQUAL_INT(-EINVAL, ret);
 }
 
@@ -413,16 +424,16 @@ TEST(seek, SeekSet) {
     int ret;
     char buf[10];
 
-    ret = RomfsSeek(openedFd, 5, ROMFS_SEEK_SET);
+    ret = RomfsSeek(r, openedFd, 5, ROMFS_SEEK_SET);
     TEST_ASSERT_EQUAL_INT(-EINVAL, ret);
 
-    ret = RomfsSeek(openedFd, -1, ROMFS_SEEK_SET);
+    ret = RomfsSeek(r, openedFd, -1, ROMFS_SEEK_SET);
     TEST_ASSERT_EQUAL_INT(-EINVAL, ret);
 
-    ret = RomfsSeek(openedFd, 1, ROMFS_SEEK_SET);
+    ret = RomfsSeek(r, openedFd, 1, ROMFS_SEEK_SET);
     TEST_ASSERT_EQUAL_INT(0, ret);
 
-    ret = RomfsRead(openedFd, buf, 10);
+    ret = RomfsRead(r, openedFd, buf, 10);
     TEST_ASSERT_EQUAL_INT(3, ret);
 
     TEST_ASSERT_EQUAL_STRING_LEN("aa\n", buf, 3);
@@ -432,19 +443,19 @@ TEST(seek, SeekCur) {
     int ret;
     char buf[10];
 
-    ret = RomfsRead(openedFd, buf, 1);
+    ret = RomfsRead(r, openedFd, buf, 1);
     TEST_ASSERT_EQUAL_INT(1, ret);
 
-    ret = RomfsSeek(openedFd, -2, ROMFS_SEEK_CUR);
+    ret = RomfsSeek(r, openedFd, -2, ROMFS_SEEK_CUR);
     TEST_ASSERT_EQUAL_INT(-EINVAL, ret);
 
-    ret = RomfsSeek(openedFd, 4, ROMFS_SEEK_CUR);
+    ret = RomfsSeek(r, openedFd, 4, ROMFS_SEEK_CUR);
     TEST_ASSERT_EQUAL_INT(-EINVAL, ret);
 
-    ret = RomfsSeek(openedFd, -1, ROMFS_SEEK_CUR);
+    ret = RomfsSeek(r, openedFd, -1, ROMFS_SEEK_CUR);
     TEST_ASSERT_EQUAL_INT(0, ret);
 
-    ret = RomfsRead(openedFd, buf, 10);
+    ret = RomfsRead(r, openedFd, buf, 10);
     TEST_ASSERT_EQUAL_INT(4, ret);
 
     TEST_ASSERT_EQUAL_STRING_LEN("aaa\n", buf, 4);
@@ -454,16 +465,16 @@ TEST(seek, SeekEnd) {
     int ret;
     char buf[10];
 
-    ret = RomfsSeek(openedFd, 1, ROMFS_SEEK_END);
+    ret = RomfsSeek(r, openedFd, 1, ROMFS_SEEK_END);
     TEST_ASSERT_EQUAL_INT(-EINVAL, ret);
 
-    ret = RomfsSeek(openedFd, -5, ROMFS_SEEK_END);
+    ret = RomfsSeek(r, openedFd, -5, ROMFS_SEEK_END);
     TEST_ASSERT_EQUAL_INT(-EINVAL, ret);
 
-    ret = RomfsSeek(openedFd, -1, ROMFS_SEEK_END);
+    ret = RomfsSeek(r, openedFd, -1, ROMFS_SEEK_END);
     TEST_ASSERT_EQUAL_INT(0, ret);
 
-    ret = RomfsRead(openedFd, buf, 10);
+    ret = RomfsRead(r, openedFd, buf, 10);
     TEST_ASSERT_EQUAL_INT(1, ret);
 
     TEST_ASSERT_EQUAL_STRING_LEN("\n", buf, 1);
@@ -483,13 +494,14 @@ TEST_GROUP(tell);
 
 TEST_SETUP(tell)
 {
-    RomfsLoad(basic_romfs, basic_romfs_len);
-    openedFd = RomfsOpenAt(ROOT_FD, "a", 0);
+    RomfsLoad(basic_romfs, basic_romfs_len, &r);
+    openedFd = RomfsOpenAt(r, ROOT_FD, "a", 0);
 }
 
 TEST_TEAR_DOWN(tell)
 {
-    RomfsClose(openedFd);
+    RomfsClose(r, openedFd);
+    RomfsUnload(&r);
 }
 
 TEST(tell, TellParamErrors)
@@ -497,16 +509,16 @@ TEST(tell, TellParamErrors)
     int ret = 0;
     long off;
 
-    ret = RomfsTell(ROOT_FD, &off);
+    ret = RomfsTell(r, ROOT_FD, &off);
     TEST_ASSERT_EQUAL_INT(-EBADF, ret);
 
-    ret = RomfsTell(openedFd, NULL);
+    ret = RomfsTell(r, openedFd, NULL);
     TEST_ASSERT_EQUAL_INT(-EINVAL, ret);
 
-    ret = RomfsTell(-1, &off);
+    ret = RomfsTell(r, -1, &off);
     TEST_ASSERT_EQUAL_INT(-EBADF, ret);
 
-    ret = RomfsTell(openedFd+1, &off);
+    ret = RomfsTell(r, openedFd+1, &off);
     TEST_ASSERT_EQUAL_INT(-EBADF, ret);
 }
 
@@ -515,10 +527,10 @@ TEST(tell, TellOk)
     int ret = 0;
     long off = 0;
 
-    ret = RomfsSeek(openedFd, 1, ROMFS_SEEK_SET);
+    ret = RomfsSeek(r, openedFd, 1, ROMFS_SEEK_SET);
     TEST_ASSERT_EQUAL_INT(0, ret);
 
-    ret = RomfsTell(openedFd, &off);
+    ret = RomfsTell(r, openedFd, &off);
     TEST_ASSERT_EQUAL_INT(0, ret);
     TEST_ASSERT_EQUAL_INT(1, off);
 }
@@ -528,10 +540,10 @@ TEST(tell, TellEnd)
     int ret = 0;
     long off = 0;
 
-    ret = RomfsSeek(openedFd, 0, ROMFS_SEEK_END);
+    ret = RomfsSeek(r, openedFd, 0, ROMFS_SEEK_END);
     TEST_ASSERT_EQUAL_INT(0, ret);
 
-    ret = RomfsTell(openedFd, &off);
+    ret = RomfsTell(r, openedFd, &off);
     TEST_ASSERT_EQUAL_INT(0, ret);
     TEST_ASSERT_EQUAL_INT(4, off);
 }
@@ -549,13 +561,14 @@ TEST_GROUP(readDir);
 
 TEST_SETUP(readDir)
 {
-    RomfsLoad(basic_romfs, basic_romfs_len);
+    RomfsLoad(basic_romfs, basic_romfs_len, &r);
     memset(dirBuf, 0, sizeof(dirBuf));
     dirBufUsed = 0;
 }
 
 TEST_TEAR_DOWN(readDir)
 {
+    RomfsUnload(&r);
 }
 
 TEST(readDir, ReadDirInvalidParams)
@@ -563,16 +576,16 @@ TEST(readDir, ReadDirInvalidParams)
     int ret;
     uint32_t cookie = 32;
 
-    ret = RomfsReadDir(ROOT_FD, NULL, 10, &cookie, &dirBufUsed);
+    ret = RomfsReadDir(r, ROOT_FD, NULL, 10, &cookie, &dirBufUsed);
     TEST_ASSERT_EQUAL_INT(-EINVAL, ret);
 
-    ret = RomfsReadDir(ROOT_FD, dirBuf, 10, &cookie, NULL);
+    ret = RomfsReadDir(r, ROOT_FD, dirBuf, 10, &cookie, NULL);
     TEST_ASSERT_EQUAL_INT(-EINVAL, ret);
 
-    ret = RomfsReadDir(ROOT_FD, NULL, 10, &cookie, NULL);
+    ret = RomfsReadDir(r, ROOT_FD, NULL, 10, &cookie, NULL);
     TEST_ASSERT_EQUAL_INT(-EINVAL, ret);
 
-    ret = RomfsReadDir(ROOT_FD, dirBuf, 10, NULL, &dirBufUsed);
+    ret = RomfsReadDir(r, ROOT_FD, dirBuf, 10, NULL, &dirBufUsed);
     TEST_ASSERT_EQUAL_INT(-EINVAL, ret);
 }
 
@@ -581,13 +594,13 @@ TEST(readDir, ReadDirBadFileDescriptor)
     int ret;
     uint32_t cookie = 32;
 
-    ret = RomfsReadDir(0, dirBuf, 10, &cookie, &dirBufUsed);
+    ret = RomfsReadDir(r, 0, dirBuf, 10, &cookie, &dirBufUsed);
     TEST_ASSERT_EQUAL_INT(-EBADF, ret);
 
-    ret = RomfsReadDir(9999, dirBuf, 10, &cookie, &dirBufUsed);
+    ret = RomfsReadDir(r, 9999, dirBuf, 10, &cookie, &dirBufUsed);
     TEST_ASSERT_EQUAL_INT(-EBADF, ret);
 
-    ret = RomfsReadDir(8, dirBuf, 10, &cookie, &dirBufUsed);
+    ret = RomfsReadDir(r, 8, dirBuf, 10, &cookie, &dirBufUsed);
     TEST_ASSERT_EQUAL_INT(-EBADF, ret);
 }
 
@@ -596,9 +609,9 @@ TEST(readDir, ReadDirNotDirectory)
     int ret;
     uint32_t cookie = 32;
 
-    ret = RomfsOpenAt(ROOT_FD, "a", 0);
+    ret = RomfsOpenAt(r, ROOT_FD, "a", 0);
 
-    ret = RomfsReadDir(ret, dirBuf, 10, &cookie, &dirBufUsed);
+    ret = RomfsReadDir(r, ret, dirBuf, 10, &cookie, &dirBufUsed);
     TEST_ASSERT_EQUAL_INT(-ENOTDIR, ret);
 }
 
@@ -607,7 +620,7 @@ TEST(readDir, ReadDirRootDir)
     int ret;
     uint32_t cookie = 0;
 
-    ret = RomfsReadDir(ROOT_FD, dirBuf, 10, &cookie, &dirBufUsed);
+    ret = RomfsReadDir(r, ROOT_FD, dirBuf, 10, &cookie, &dirBufUsed);
     TEST_ASSERT_EQUAL_INT(0, ret);
 
     TEST_ASSERT_EQUAL_INT(4, dirBufUsed);
@@ -642,9 +655,9 @@ TEST(readDir, ReadDirInDir)
     int ret;
     uint32_t cookie = 0;
 
-    ret = RomfsOpenAt(ROOT_FD, "dir", 0);
+    ret = RomfsOpenAt(r, ROOT_FD, "dir", 0);
 
-    ret = RomfsReadDir(ret, dirBuf, 10, &cookie, &dirBufUsed);
+    ret = RomfsReadDir(r, ret, dirBuf, 10, &cookie, &dirBufUsed);
     TEST_ASSERT_EQUAL_INT(0, ret);
 
     TEST_ASSERT_EQUAL_INT(3, dirBufUsed);
@@ -673,7 +686,7 @@ TEST(readDir, ReadDirUsingCookie)
     int ret;
     uint32_t cookie = 0;
 
-    ret = RomfsReadDir(ROOT_FD, dirBuf, 2, &cookie, &dirBufUsed);
+    ret = RomfsReadDir(r, ROOT_FD, dirBuf, 2, &cookie, &dirBufUsed);
     TEST_ASSERT_EQUAL_INT(0, ret);
 
     TEST_ASSERT_EQUAL_INT(2, dirBufUsed);
@@ -682,7 +695,7 @@ TEST(readDir, ReadDirUsingCookie)
     TEST_ASSERT_EQUAL_STRING_LEN(".", dirBuf[0].name, 1);
     TEST_ASSERT_EQUAL_STRING_LEN("..", dirBuf[1].name, 2);
 
-    ret = RomfsReadDir(ROOT_FD, dirBuf, 2, &cookie, &dirBufUsed);
+    ret = RomfsReadDir(r, ROOT_FD, dirBuf, 2, &cookie, &dirBufUsed);
     TEST_ASSERT_EQUAL_INT(0, ret);
 
     TEST_ASSERT_EQUAL_INT(2, dirBufUsed);
@@ -708,13 +721,14 @@ TEST_GROUP(mapFile);
 
 TEST_SETUP(mapFile)
 {
-    RomfsLoad(basic_romfs, basic_romfs_len);
-    openedFd = RomfsOpenAt(ROOT_FD, "a", 0);
+    RomfsLoad(basic_romfs, basic_romfs_len, &r);
+    openedFd = RomfsOpenAt(r, ROOT_FD, "a", 0);
 }
 
 TEST_TEAR_DOWN(mapFile)
 {
-    RomfsClose(openedFd);
+    RomfsClose(r, openedFd);
+    RomfsUnload(&r);
 }
 
 TEST(mapFile, MapError)
@@ -723,13 +737,13 @@ TEST(mapFile, MapError)
     size_t len;
     int ret;
 
-    ret = RomfsMapFile((void **)&addr, &len, 0, 0);
+    ret = RomfsMapFile(r, (void **)&addr, &len, 0, 0);
     TEST_ASSERT_EQUAL_INT(-EBADF, ret);
 
-    ret = RomfsMapFile((void **)&addr, &len, openedFd, 100);
+    ret = RomfsMapFile(r, (void **)&addr, &len, openedFd, 100);
     TEST_ASSERT_EQUAL_INT(-EINVAL, ret);
 
-    ret = RomfsMapFile((void **)&addr, &len, ROOT_FD, 0);
+    ret = RomfsMapFile(r, (void **)&addr, &len, ROOT_FD, 0);
     TEST_ASSERT_EQUAL_INT(-EACCES, ret);
 }
 
@@ -738,7 +752,7 @@ TEST(mapFile, BasicMap)
     uint8_t *addr;
     size_t len;
 
-    int ret = RomfsMapFile((void **)&addr, &len, openedFd, 0);
+    int ret = RomfsMapFile(r, (void **)&addr, &len, openedFd, 0);
     TEST_ASSERT_EQUAL_INT(0, ret);
 
     TEST_ASSERT_EQUAL_INT(4, len);
@@ -750,7 +764,7 @@ TEST(mapFile, MapWithOffset)
     uint8_t *addr;
     size_t len;
 
-    int ret = RomfsMapFile((void **)&addr, &len, openedFd, 2);
+    int ret = RomfsMapFile(r, (void **)&addr, &len, openedFd, 2);
     TEST_ASSERT_EQUAL_INT(0, ret);
 
     TEST_ASSERT_EQUAL_INT(2, len);

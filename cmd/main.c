@@ -66,7 +66,7 @@ int OpenRomfs(const char * filename, uint8_t **romfs, size_t *romfs_size) {
 #define DIR_BUF_LEN 100
 
 static
-int ListDir(const char *path) {
+int ListDir(romfs_t r, const char *path) {
     int f, ret;
     romfs_dirent_t dir[DIR_BUF_LEN];
     uint32_t cookie = 0;
@@ -74,11 +74,11 @@ int ListDir(const char *path) {
     romfs_stat_t stat;
     size_t total = 0;
 
-    f = RomfsOpenRoot(path, 0);
+    f = RomfsOpenRoot(r, path, 0);
     if (f < 0) return f;
 
     do {
-        ret = RomfsReadDir(f, dir, DIR_BUF_LEN, &cookie, &used);
+        ret = RomfsReadDir(r, f, dir, DIR_BUF_LEN, &cookie, &used);
         if (ret < 0) return ret;
 
         printf("[%-10s] [%-20s] [%-4s] [%-4s] [%-10s]\n", "Offset", "Name", "Mode", "Size", "Check");
@@ -90,7 +90,7 @@ int ListDir(const char *path) {
             printf("   0x%02x", dir[i].type);
 
             if (IS_FILE(dir[i].type)) {
-                ret = RomfsFdStatAt(f, dir[i].name, &stat);
+                ret = RomfsFdStatAt(r, f, dir[i].name, &stat);
                 if (ret >= 0) {
                     printf("   %4d   0x%x", stat.size, stat.chksum);
                     total += stat.size;
@@ -104,37 +104,38 @@ int ListDir(const char *path) {
 
     printf("\nTotal size: %zu\n", total);
 
-    RomfsClose(f);
+    RomfsClose(r, f);
 
     return 0;
 }
 
 #define BUF_SIZE 255
 
-int ReadFile(const char *path) {
+int ReadFile(romfs_t r, const char *path) {
     int f, ret;
     char buf[BUF_SIZE];
 
-    f = RomfsOpenRoot(path, 0);
+    f = RomfsOpenRoot(r, path, 0);
     if (f < 0) return f;
 
     do {
-        ret = RomfsRead(f, buf, BUF_SIZE);
+        ret = RomfsRead(r, f, buf, BUF_SIZE);
         if (ret < 0) return ret;
 
         fwrite(buf, 1, ret, stdout);
         if (ret < BUF_SIZE) break;
     } while (ret == BUF_SIZE);
 
-    RomfsClose(f);
+    RomfsClose(r, f);
     return 0;
 }
 
 int main(int argc, char *argv[])
 {
     struct arguments arguments;
-    uint8_t *romfs;
+    uint8_t *romfs_img;
     size_t romfs_size;
+    romfs_t romfs;
     int ret;
 
     arguments.path = "/";
@@ -145,20 +146,20 @@ int main(int argc, char *argv[])
     if (ret >= argc) FATAL("filename must be given!");
     arguments.file = argv[ret];
 
-    if (OpenRomfs(arguments.file, &romfs, &romfs_size) != 0) FATAL("can't open file: %s", arguments.file);
+    if (OpenRomfs(arguments.file, &romfs_img, &romfs_size) != 0) FATAL("can't open file: %s", arguments.file);
 
-    ret = RomfsLoad(romfs, romfs_size);
+    ret = RomfsLoad(romfs_img, romfs_size, romfs);
     if (ret < 0) { errno = -ret; perror("RomfsLoad"); return 1; }
 
     switch (arguments.mode)
     {
     case LIST_MODE:
         printf("%s:\n", arguments.path);
-        ret = ListDir(arguments.path);
+        ret = ListDir(romfs, arguments.path);
         if (ret < 0) { errno = -ret; perror("ListDir"); return 1; }
         break;
     case READ_MODE:
-        ret = ReadFile(arguments.path);
+        ret = ReadFile(romfs, arguments.path);
         if (ret < 0) { errno = -ret; perror("ReadFile"); return 1; }
         break;
     default:
