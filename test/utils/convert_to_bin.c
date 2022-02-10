@@ -7,8 +7,15 @@ Keeping this for reference.
 
 #include <stdio.h>
 
-extern unsigned char basic_romfs[];
-extern unsigned int basic_romfs_len;
+#ifndef ROMFS
+#   define ROMFS basic_romfs
+#endif
+
+#define XLEN(x) x ## _len
+#define LEN(x) XLEN(x)
+
+extern unsigned char ROMFS[];
+extern unsigned int LEN(ROMFS);
 
 int main(int argc, char *argv[])
 {
@@ -16,7 +23,7 @@ int main(int argc, char *argv[])
 
     FILE *f = fopen(argv[1], "w");
 
-    fwrite(basic_romfs, 1, basic_romfs_len, f);
+    fwrite(ROMFS, 1, LEN(ROMFS), f);
 
     fclose(f);
 
