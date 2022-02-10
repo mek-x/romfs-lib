@@ -143,12 +143,15 @@ int main(int argc, char *argv[])
 
     argp_parse(&argp, argc, argv, ARGP_NO_ARGS, &ret, &arguments);
 
-    if (ret >= argc) FATAL("filename must be given!");
-    arguments.file = argv[ret];
+    if (ret >= argc) {
+        arguments.file = "default.romfs";
+    } else {
+        arguments.file = argv[ret];
+    }
 
     if (OpenRomfs(arguments.file, &romfs_img, &romfs_size) != 0) FATAL("can't open file: %s", arguments.file);
 
-    ret = RomfsLoad(romfs_img, romfs_size, romfs);
+    ret = RomfsLoad(romfs_img, romfs_size, &romfs);
     if (ret < 0) { errno = -ret; perror("RomfsLoad"); return 1; }
 
     switch (arguments.mode)
@@ -165,6 +168,8 @@ int main(int argc, char *argv[])
     default:
         break;
     }
+
+    RomfsUnload(&romfs);
 
     return 0;
 }
