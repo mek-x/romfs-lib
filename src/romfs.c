@@ -224,6 +224,27 @@ int RomfsSeek(int fd, long off, romfs_seek_t whence)
     return 0;
 }
 
+int RomfsTell(int fd, long *off)
+{
+    fd = fd - RESVD_FDS;
+
+    if (NULL == off) {
+        return -EINVAL;
+    }
+
+    if (fd < 0 || fd > MAX_OPEN || !fildes[fd].opened) {
+        return -EBADF;
+    }
+
+    if (!IS_FILE(fildes[fd].node.mode)) {
+        return -EBADF;
+    }
+
+    *off = (long)(fildes[fd].cur - (void *)(romfs.img + fildes[fd].node.dataOff));
+
+    return 0;
+}
+
 /* TODO:
     - follow hardlinks
     - cookie can be bad

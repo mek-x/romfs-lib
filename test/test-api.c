@@ -478,6 +478,72 @@ TEST_GROUP_RUNNER(seek)
 }
 
 /***************************************/
+TEST_GROUP(tell);
+/***************************************/
+
+TEST_SETUP(tell)
+{
+    RomfsLoad(basic_romfs, basic_romfs_len);
+    openedFd = RomfsOpenAt(ROOT_FD, "a", 0);
+}
+
+TEST_TEAR_DOWN(tell)
+{
+    RomfsClose(openedFd);
+}
+
+TEST(tell, TellParamErrors)
+{
+    int ret = 0;
+    long off;
+
+    ret = RomfsTell(ROOT_FD, &off);
+    TEST_ASSERT_EQUAL_INT(-EBADF, ret);
+
+    ret = RomfsTell(openedFd, NULL);
+    TEST_ASSERT_EQUAL_INT(-EINVAL, ret);
+
+    ret = RomfsTell(-1, &off);
+    TEST_ASSERT_EQUAL_INT(-EBADF, ret);
+
+    ret = RomfsTell(openedFd+1, &off);
+    TEST_ASSERT_EQUAL_INT(-EBADF, ret);
+}
+
+TEST(tell, TellOk)
+{
+    int ret = 0;
+    long off = 0;
+
+    ret = RomfsSeek(openedFd, 1, ROMFS_SEEK_SET);
+    TEST_ASSERT_EQUAL_INT(0, ret);
+
+    ret = RomfsTell(openedFd, &off);
+    TEST_ASSERT_EQUAL_INT(0, ret);
+    TEST_ASSERT_EQUAL_INT(1, off);
+}
+
+TEST(tell, TellEnd)
+{
+    int ret = 0;
+    long off = 0;
+
+    ret = RomfsSeek(openedFd, 0, ROMFS_SEEK_END);
+    TEST_ASSERT_EQUAL_INT(0, ret);
+
+    ret = RomfsTell(openedFd, &off);
+    TEST_ASSERT_EQUAL_INT(0, ret);
+    TEST_ASSERT_EQUAL_INT(4, off);
+}
+
+TEST_GROUP_RUNNER(tell)
+{
+    RUN_TEST_CASE(tell, TellParamErrors);
+    RUN_TEST_CASE(tell, TellOk);
+    RUN_TEST_CASE(tell, TellEnd);
+}
+
+/***************************************/
 TEST_GROUP(readDir);
 /***************************************/
 

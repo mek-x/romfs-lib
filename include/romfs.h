@@ -60,5 +60,6 @@ int RomfsFdStat(int fd, romfs_stat_t *stat);
 int RomfsFdStatAt(int fd, const char *path, romfs_stat_t *stat);
 int RomfsRead(int fd, void *buf, size_t nbyte);
 int RomfsSeek(int fd, long off, romfs_seek_t whence);
+int RomfsTell(int fd, long *off);
 int RomfsReadDir(int fd, romfs_dirent_t *buf, size_t bufLen, uint32_t *cookie, size_t *bufUsed);
 int RomfsMapFile(void **addr, size_t *len, int fd, uint32_t off);
