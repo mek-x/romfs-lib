@@ -1,6 +1,13 @@
 cmake_minimum_required(VERSION 3.9)
+
+include(cmake/VersionFromGit.cmake)
+
+version_from_git(
+    TIMESTAMP "%Y%m%d%H%M%S"
+    )
+
 project(romfs
-    VERSION 0.1.0
+    VERSION ${VERSION}
     LANGUAGES C
     )
 
