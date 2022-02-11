@@ -3,14 +3,13 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#ifndef RomfsMalloc
+#ifndef ROMFS_CUSTOM_MALLOC
 #   include <stdlib.h>
-#   define RomfsMalloc(size) malloc(size)
-#endif
-
-#ifndef RomfsFree
-#   include <stdlib.h>
-#   define RomfsFree(ptr) free(ptr)
+#   define RomfsMalloc(x)  malloc(x)
+#   define RomfsFree(x)  free(x)
+#else
+void *RomfsMalloc(size_t s);
+void RomfsFree(void* ptr);
 #endif
 
 #ifndef PROJECT_VERSION
