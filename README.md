@@ -18,5 +18,10 @@ Simple library for reading the romfs images. Only using static memory allocation
 - [ ] ReadNodeHdr - check for bad offset, maybe count checksum?
 - [ ] Checksum checking
 - [ ] Documentation!
-- [ ] compile options (max path length, max filename length, etc.)
+- [x] compile options (max path length, max filename length, etc.)
 
+## Changelog
+
+### v0.3.0
+
+- changed interface to support multiple instances
