@@ -13,6 +13,7 @@ Simple library for reading the romfs images. Only using static memory allocation
 - [x] close
 - [x] read
 - [x] seek
+- [x] tell
 - [x] read dir
 - [x] map file
 - [ ] ReadNodeHdr - check for bad offset, maybe count checksum?
@@ -21,6 +22,11 @@ Simple library for reading the romfs images. Only using static memory allocation
 - [x] compile options (max path length, max filename length, etc.)
 
 ## Changelog
+
+### v0.4.0
+
+- added possibility to implement and use own malloc/free
+- added Tell operation
 
 ### v0.3.0
 
