@@ -13,16 +13,16 @@ project(romfs
 
 include(CTest)
 
-set(TARGET ${CMAKE_PROJECT_NAME})
+set(TARGET ${CMAKE_PROJECT_NAME}-tool)
 set(VERSION ${CMAKE_PROJECT_VERSION})
 
 message("Building ${TARGET} v${VERSION}")
 
-add_executable(${TARGET}-tool cmd/main.c)
+add_executable(${TARGET} cmd/main.c)
 
-add_subdirectory(${CMAKE_SOURCE_DIR}/src ${TARGET})
+add_subdirectory(${CMAKE_SOURCE_DIR}/src romfs)
 
-target_link_libraries(${TARGET}-tool PUBLIC ${TARGET})
+target_link_libraries(${TARGET} PUBLIC romfs)
 
 if(BUILD_TESTING)
     enable_testing()

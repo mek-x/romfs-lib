@@ -1,3 +1,4 @@
+set(TARGET romfs)
 file(GLOB sources
     "./*.c"
 )
