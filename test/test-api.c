@@ -37,10 +37,32 @@ TEST(load, LoadBadImage)
     TEST_ASSERT_NULL(r);
 }
 
+TEST(load, LoadAndCheckContextIsClean)
+{
+    int ret = RomfsLoad(empty_romfs, empty_romfs_len, &r);
+    TEST_ASSERT_EQUAL_INT(0, ret);
+    TEST_ASSERT_NOT_NULL(r);
+    TEST_ASSERT_EQUAL(0, r->fildes[1].opened);
+
+    r->fildes[1].opened = 1;
+
+    RomfsUnload(&r);
+    TEST_ASSERT_NULL(r);
+
+    ret = RomfsLoad(empty_romfs, empty_romfs_len, &r);
+    TEST_ASSERT_EQUAL_INT(0, ret);
+    TEST_ASSERT_NOT_NULL(r);
+    TEST_ASSERT_EQUAL(0, r->fildes[1].opened);
+
+    RomfsUnload(&r);
+    TEST_ASSERT_NULL(r);
+}
+
 TEST_GROUP_RUNNER(load)
 {
     RUN_TEST_CASE(load, LoadEmptyRomfsImage);
     RUN_TEST_CASE(load, LoadBadImage);
+    RUN_TEST_CASE(load, LoadAndCheckContextIsClean);
 }
 
 /***************************************/

@@ -9,6 +9,8 @@
 #   define ROMFS_TRACE(fmt, ...)
 #endif
 
+#define MAX_OPEN    20  ///> Max number of open files at once. Root is preopened
+
 // Volume header
 
 #define VOLHDR_MAGIC_OFF      0   ///>  0-7:  ROMFS magic.
@@ -39,6 +41,23 @@
 #define ROMF_MAX_LINKS        16
 
 typedef struct {
+    uint32_t off;
+    uint32_t next;
+    uint32_t info;
+    uint32_t size;
+    uint32_t chksum;
+    const char *name;
+    uint32_t dataOff;
+    uint8_t mode;
+} nodehdr_t;
+
+typedef struct fildes_t {
+    uint8_t     opened;
+    nodehdr_t   node;
+    void        *cur;
+} fildes_t;
+
+typedef struct {
     size_t size;
     const char *name;
     uint32_t chksum;
@@ -49,18 +68,8 @@ struct romfs_t {
     uint8_t *img;
     size_t size;
     volume_t vol;
+    fildes_t fildes[MAX_OPEN];
 };
-
-typedef struct {
-    uint32_t off;
-    uint32_t next;
-    uint32_t info;
-    uint32_t size;
-    uint32_t chksum;
-    const char *name;
-    uint32_t dataOff;
-    uint8_t mode;
-} nodehdr_t;
 
 int RomfsVolumeConfigure(const uint8_t *buf, volume_t *vol);
 int RomfsGetNodeHdr(const struct romfs_t *rm, uint32_t offset, nodehdr_t *nd);
