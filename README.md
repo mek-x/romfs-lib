@@ -23,6 +23,10 @@ Simple library for reading the romfs images. Only using static memory allocation
 
 ## Changelog
 
+### v0.4.1
+
+- fix multithreaded execution
+
 ### v0.4.0
 
 - added possibility to implement and use own malloc/free
