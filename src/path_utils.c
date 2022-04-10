@@ -31,7 +31,7 @@ char *UtilsParsePathGetNext(const char *path, path_t buf, char **state) {
         p = NULL;
     }
 
-    p = __strtok_r(p, "/", state);
+    p = strtok_r(p, "/", state);
     return p;
 }
 
