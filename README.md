@@ -23,6 +23,10 @@ Simple library for reading the romfs images. Only using static memory allocation
 
 ## Changelog
 
+### v0.4.2
+
+- path_utils: change `__strtok_r` to `strtok_r`
+
 ### v0.4.1
 
 - fix multithreaded execution
